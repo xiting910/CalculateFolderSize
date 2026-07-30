@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\srcs\CalculateFolderSize.Cli\CalculateFolderSize.Cli.csproj" />
+  </ItemGroup>
+
+</Project>

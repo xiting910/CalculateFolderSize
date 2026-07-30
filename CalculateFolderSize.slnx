@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/others/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="CHANGELOG.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/srcs/">
+    <Project Path="srcs/CalculateFolderSize.Cli/CalculateFolderSize.Cli.csproj" Id="e2406ff0-a235-445d-8ef7-41c42de17f1f" />
+    <Project Path="srcs/CalculateFolderSize.Core/CalculateFolderSize.Core.csproj" Id="cad69648-3026-4c2c-bd27-b7f950b3e39e" />
+    <Project Path="srcs/CalculateFolderSize.UI.Android/CalculateFolderSize.UI.Android.csproj" Id="e3550bab-8553-41f7-a2d6-e2dbb762e08e" />
+    <Project Path="srcs/CalculateFolderSize.UI.Desktop/CalculateFolderSize.UI.Desktop.csproj" Id="b400f212-41de-4f1c-b8c8-75451f00b870" />
+    <Project Path="srcs/CalculateFolderSize.UI.Shared/CalculateFolderSize.UI.Shared.csproj" Id="b6c305fb-5606-4fc1-bab0-2ddb6dda31fa" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CalculateFolderSize.Cli.Tests/CalculateFolderSize.Cli.Tests.csproj" Id="5427d98a-3075-44ce-98ba-1713b89db36a" />
+    <Project Path="tests/CalculateFolderSize.Core.Tests/CalculateFolderSize.Core.Tests.csproj" Id="8ba29b9f-99f0-478c-a3e7-215134962a7e" />
+  </Folder>
+</Solution>

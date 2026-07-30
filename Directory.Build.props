@@ -1,0 +1,44 @@
+<Project>
+
+  <!-- 所有项目共用的属性 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <NoWarn>$(NoWarn);NU1507</NoWarn>
+    <ProductName>CalculateFolderSize</ProductName>
+    <Author>xiting910</Author>
+  </PropertyGroup>
+
+  <!-- 根据项目名是否以 .Tests 结尾判断是否为测试项目 -->
+  <PropertyGroup>
+    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests'))">true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- 非测试项目生成 XML 文档 -->
+  <PropertyGroup Condition="'$(IsTestProject)' != 'true'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- 仅测试项目: 设置输出类型为 Exe, 启用测试平台支持 + 隐式 using + 不可打包, 忽略特定警告 -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <OutputType>Exe</OutputType>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1707;MTP0001</NoWarn>
+  </PropertyGroup>
+
+  <!-- 仅测试项目: 引用测试相关的 NuGet 包 -->
+  <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <!-- 仅测试项目: 引用 Xunit -->
+  <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

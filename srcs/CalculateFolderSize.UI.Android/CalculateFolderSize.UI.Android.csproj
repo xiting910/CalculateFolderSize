@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(TargetFramework)-android</TargetFramework>
+    <ApplicationId>com.$(Author).$(ProductName.ToLowerInvariant())</ApplicationId>
+    <ApplicationIdTitle>$(ProductName)</ApplicationIdTitle>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CalculateFolderSize.UI.Shared\CalculateFolderSize.UI.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" />
+  </ItemGroup>
+
+</Project>
