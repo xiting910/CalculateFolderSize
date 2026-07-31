@@ -12,14 +12,12 @@ namespace CalculateFolderSize.Cli;
 /// <param name="ReplacedSeparator">被替换的目录分隔符, 用于在输出中替换目录分隔符</param>
 /// <param name="ExitCommand">退出命令</param>
 /// <param name="ClearCacheCommand">清除缓存命令</param>
-/// <param name="YesString">确认命令</param>
 public sealed record CliOptions(
     int SizeStringLength,
     char DirectorySeparator,
     char ReplacedSeparator,
     string ExitCommand,
-    string ClearCacheCommand,
-    string YesString)
+    string ClearCacheCommand)
 {
     /// <summary>
     /// 连续的目录分隔符, 用于在字符串中查找和替换连续的目录分隔符
@@ -70,13 +68,7 @@ public sealed record CliOptions(
             clearCacheCommand = "clearcache";
         }
 
-        var yesString = section[nameof(YesString)];
-        if (string.IsNullOrWhiteSpace(yesString))
-        {
-            yesString = "y";
-        }
-
-        return new(length, separator, replaced, exitCommand, clearCacheCommand, yesString);
+        return new(length, separator, replaced, exitCommand, clearCacheCommand);
     }
 
     /// <summary>

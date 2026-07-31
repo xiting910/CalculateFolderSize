@@ -25,6 +25,11 @@ internal sealed class App(
     IFolderSizeCalculator _calculator)
 {
     /// <summary>
+    /// 等待用户按键信息
+    /// </summary>
+    private const string WaitForKeyMessage = "按任意键继续...";
+
+    /// <summary>
     /// 运行应用程序主循环
     /// </summary>
     public async Task RunAsync()
@@ -38,7 +43,7 @@ internal sealed class App(
             _console.MarkupLine($"[teal]{Markup.Escape(prompt1)}[/]");
             _console.MarkupLine($"[teal]{Markup.Escape(prompt2)}[/]");
 
-            var input = Console.ReadLine();
+            var input = _console.Prompt(new TextPrompt<string>(string.Empty).AllowEmpty());
             if (string.IsNullOrWhiteSpace(input)) { continue; }
 
             if (input.Equals(_options.ExitCommand, StringComparison.OrdinalIgnoreCase))
@@ -49,7 +54,8 @@ internal sealed class App(
             {
                 _calculator.ClearCache();
                 _console.MarkupLine("\n[lime]缓存已清理[/]\n");
-                WaitForKeyPress();
+                _console.Markup(WaitForKeyMessage);
+                _ = _console.Input.ReadKey(true);
                 continue;
             }
 
@@ -57,7 +63,8 @@ internal sealed class App(
             if (paths.Count == 0)
             {
                 _console.MarkupLine("\n[yellow]未输入有效的文件夹路径[/]\n");
-                WaitForKeyPress();
+                _console.Markup(WaitForKeyMessage);
+                _ = _console.Input.ReadKey(true);
                 continue;
             }
 
@@ -70,8 +77,14 @@ internal sealed class App(
             _console.MarkupLine(string.Empty);
 
             var stopwatch = Stopwatch.StartNew();
-            var tasks = paths.Select(p => (Path: p, Task: _calculator.GetFromFolderAsync(p))).ToList();
-            var validResults = new List<FolderSize>();
+
+            List<FolderSize> validResults = [];
+            List<(string Path, Task<FolderSize?> Task)> tasks = [];
+            foreach (var path in paths)
+            {
+                tasks.Add((path, Task.Run(() => _calculator.GetFromFolder(path))));
+            }
+
             while (tasks.Count > 0)
             {
                 var finished = await Task.WhenAny(tasks.Select(t => t.Task));
@@ -121,10 +134,10 @@ internal sealed class App(
             if (resultsWithErrors.Length > 0)
             {
                 _console.Markup(
-                    $"[teal]共 {resultsWithErrors.Length} 个文件夹存在访问错误, 是否查看错误路径? (y/n): [/]");
-                var showErrors = Console.ReadLine();
+                    $"[teal]共 {resultsWithErrors.Length} 个文件夹存在访问错误, 是否查看错误路径? (y/n):[/]");
+                var showErrorsInput = _console.Prompt(new TextPrompt<string>("").AllowEmpty());
                 _console.MarkupLine(string.Empty);
-                if (showErrors is not null && showErrors.StartsWith(_options.YesString, StringComparison.OrdinalIgnoreCase))
+                if (char.TryParse(showErrorsInput, out var showErrorsChar) && showErrorsChar is 'y' or 'Y')
                 {
                     foreach (var result in resultsWithErrors)
                     {
@@ -143,7 +156,8 @@ internal sealed class App(
                 }
             }
 
-            WaitForKeyPress();
+            _console.Markup(WaitForKeyMessage);
+            _ = _console.Input.ReadKey(true);
         }
     }
 
@@ -211,15 +225,5 @@ internal sealed class App(
             }
         }
         return paths;
-    }
-
-    /// <summary>
-    /// 等待用户按下任意键后继续执行
-    /// </summary>
-    /// <param name="message">提示信息</param>
-    private static void WaitForKeyPress(string message = "按任意键继续...")
-    {
-        Console.Write(message);
-        _ = Console.ReadKey(true);
     }
 }

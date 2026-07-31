@@ -8,4 +8,4 @@ namespace CalculateFolderSize.Core.Models;
 /// <param name="FullName">文件完整路径</param>
 /// <param name="Size">文件字节大小</param>
 /// <param name="Exception">获取文件大小时发生的异常</param>
-public readonly record struct FileEntry(string FullName, long Size, Exception? Exception);
+internal readonly record struct FileEntry(string FullName, long Size, Exception? Exception);

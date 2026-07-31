@@ -5,7 +5,7 @@ using Moq;
 
 namespace CalculateFolderSize.Core.Tests;
 
-public sealed class FolderSizeCalculatorTests
+public sealed class FolderSizeCalculatorTests : IDisposable
 {
     private readonly Mock<IFileSystem> _fileSystemMock;
     private readonly CoreOptions _options;
@@ -18,13 +18,18 @@ public sealed class FolderSizeCalculatorTests
         _calculator = new(_options, _fileSystemMock.Object);
     }
 
+    public void Dispose()
+    {
+        _calculator.Dispose();
+    }
+
     [Fact]
-    public async Task GetFromFolderAsync_NonExistentDirectory_ReturnsNull()
+    public void GetFromFolder_NonExistentDirectory_ReturnsNull()
     {
         const string path = @"C:\NonExistent";
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(false).Verifiable(Times.Once);
 
-        var result = await _calculator.GetFromFolderAsync(path, token: TestContext.Current.CancellationToken);
+        var result = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
         Assert.Null(result);
 
@@ -32,14 +37,14 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task GetFromFolderAsync_EmptyDirectory_ReturnsFolderSizeWithZeroFiles()
+    public void GetFromFolder_EmptyDirectory_ReturnsFolderSizeWithZeroFiles()
     {
         const string path = @"C:\EmptyDir";
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns([]).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
 
-        var result = await _calculator.GetFromFolderAsync(path, token: TestContext.Current.CancellationToken);
+        var result = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(path, result.Path);
@@ -52,7 +57,7 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task GetFromFolderAsync_DirectoryWithFiles_CalculatesCorrectSize()
+    public void GetFromFolder_DirectoryWithFiles_CalculatesCorrectSize()
     {
         const string path = @"C:\DirWithFiles";
         var files = new[]
@@ -65,7 +70,7 @@ public sealed class FolderSizeCalculatorTests
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns(files).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
 
-        var result = await _calculator.GetFromFolderAsync(path, token: TestContext.Current.CancellationToken);
+        var result = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(path, result.Path);
@@ -78,7 +83,7 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task GetFromFolderAsync_FileWithException_RecordsError()
+    public void GetFromFolder_FileWithException_RecordsError()
     {
         const string path = @"C:\DirWithErrors";
         var exception = new UnauthorizedAccessException("Access denied");
@@ -92,7 +97,7 @@ public sealed class FolderSizeCalculatorTests
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns(files).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
 
-        var result = await _calculator.GetFromFolderAsync(path, token: TestContext.Current.CancellationToken);
+        var result = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(50, result.TotalBytes);
@@ -104,7 +109,7 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task GetFromFolderAsync_WithSubDirectories_CalculatesRecursively()
+    public void GetFromFolder_WithSubDirectories_CalculatesRecursively()
     {
         const string rootPath = @"C:\Root";
         const string subPath = @"C:\Root\SubDir";
@@ -112,10 +117,7 @@ public sealed class FolderSizeCalculatorTests
         {
             new FileEntry(@"C:\Root\root_file.txt", 100, null)
         };
-        var subDirEntries = new[]
-        {
-            new DirectoryEntry(subPath)
-        };
+        var subDirEntries = new[] { subPath };
         var subDirFiles = new[]
         {
             new FileEntry(@"C:\Root\SubDir\sub_file.txt", 200, null)
@@ -127,7 +129,7 @@ public sealed class FolderSizeCalculatorTests
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(subPath)).Returns(subDirFiles).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(subPath)).Returns([]).Verifiable(Times.Once);
 
-        var result = await _calculator.GetFromFolderAsync(rootPath, token: TestContext.Current.CancellationToken);
+        var result = _calculator.GetFromFolder(rootPath, token: TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(rootPath, result.Path);
@@ -139,7 +141,7 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task GetFromFolderAsync_SubDirectoryThrowsException_RecordsErrorAndContinues()
+    public void GetFromFolder_SubDirectoryThrowsException_RecordsErrorAndContinues()
     {
         const string rootPath = @"C:\Root";
         const string goodPath = @"C:\Root\Good";
@@ -148,14 +150,14 @@ public sealed class FolderSizeCalculatorTests
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(rootPath)).Returns(true).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(rootPath)).Returns([]).Verifiable(Times.Once);
-        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(rootPath)).Returns([new(goodPath), new(badPath)]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(rootPath)).Returns([goodPath, badPath]).Verifiable(Times.Once);
 
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(goodPath)).Returns([new(goodPath + @"\f.txt", 100, null)]).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(goodPath)).Returns([]).Verifiable(Times.Once);
 
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(badPath)).Throws(exception).Verifiable(Times.Once);
 
-        var result = await _calculator.GetFromFolderAsync(rootPath, token: TestContext.Current.CancellationToken);
+        var result = _calculator.GetFromFolder(rootPath, token: TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(100, result.TotalBytes);
@@ -169,14 +171,14 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task ClearCache_RemovesAllCachedEntries()
+    public void ClearCache_RemovesAllCachedEntries()
     {
         const string path = @"C:\Dir";
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns([]).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
 
-        _ = await _calculator.GetFromFolderAsync(path, token: TestContext.Current.CancellationToken);
+        _ = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
         Assert.Equal(1, _calculator.CacheCount);
 
         _calculator.ClearCache();
@@ -187,15 +189,15 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task GetFromFolderAsync_CachedResult_UsesCache()
+    public void GetFromFolder_CachedResult_UsesCache()
     {
         const string path = @"C:\Dir";
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Exactly(2));
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns([]).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
 
-        var result1 = await _calculator.GetFromFolderAsync(path, token: TestContext.Current.CancellationToken);
-        var result2 = await _calculator.GetFromFolderAsync(path, token: TestContext.Current.CancellationToken);
+        var result1 = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
+        var result2 = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
         Assert.Equal(result1, result2);
 
@@ -205,7 +207,7 @@ public sealed class FolderSizeCalculatorTests
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
-    public async Task CacheCount_PropertyChanged_IsRaised(int expectedCalls)
+    public void CacheCount_PropertyChanged_IsRaised(int expectedCalls)
     {
         const string path = @"C:\Dir";
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Exactly(expectedCalls + 1));
@@ -224,7 +226,7 @@ public sealed class FolderSizeCalculatorTests
         FolderSize? oldResult = null, result;
         for (var i = 0; i < expectedCalls + 1; i++)
         {
-            result = await _calculator.GetFromFolderAsync(path, token: TestContext.Current.CancellationToken);
+            result = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
             if (i > 0)
             {
                 Assert.Equal(oldResult, result);
@@ -238,7 +240,7 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task GetFromFolderAsync_ProgressReport_MatchesFinalResult()
+    public void GetFromFolder_ProgressReport_MatchesFinalResult()
     {
         const string rootPath = @"C:\Root";
         const string subPath = @"C:\Root\SubDir";
@@ -247,7 +249,7 @@ public sealed class FolderSizeCalculatorTests
             new FileEntry(@"C:\Root\f1.txt", 100, null),
             new FileEntry(@"C:\Root\f2.txt", 200, null)
         };
-        var subDirEntries = new[] { new DirectoryEntry(subPath) };
+        var subDirEntries = new[] { subPath };
         var subDirFiles = new[] { new FileEntry(subPath + @"\f3.txt", 300, null) };
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(rootPath)).Returns(true).Verifiable(Times.Once);
@@ -259,7 +261,7 @@ public sealed class FolderSizeCalculatorTests
         var reports = new List<ProgressReport>();
         var progress = new SynchronousProgress<ProgressReport>(reports.Add);
 
-        var result = await _calculator.GetFromFolderAsync(rootPath, progress, TestContext.Current.CancellationToken);
+        var result = _calculator.GetFromFolder(rootPath, progress, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(rootFiles.Length + subDirEntries.Length + subDirFiles.Length, reports.Count);
@@ -271,7 +273,7 @@ public sealed class FolderSizeCalculatorTests
     }
 
     [Fact]
-    public async Task GetFromFolderAsync_Cancellation_ThrowsOperationCanceledException()
+    public void GetFromFolder_Cancellation_ThrowsOperationCanceledException()
     {
         const string path = @"C:\Dir";
         var files = new[]
@@ -290,7 +292,43 @@ public sealed class FolderSizeCalculatorTests
         }).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.AtMostOnce());
 
-        _ = await Assert.ThrowsAsync<OperationCanceledException>(() => _calculator.GetFromFolderAsync(path, token: cts.Token));
+        _ = Assert.Throws<OperationCanceledException>(() => _calculator.GetFromFolder(path, token: cts.Token));
+
+        _fileSystemMock.Verify();
+    }
+
+    [Fact]
+    public void GetFromFolder_ConcurrentSamePath_ComputesOnlyOnce()
+    {
+        const string path = @"C:\Dir";
+        using var gate = new ManualResetEventSlim(false);
+
+        var mockCallCount = 0;
+        _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Exactly(2));
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns(() =>
+        {
+            _ = Interlocked.Increment(ref mockCallCount);
+            gate.Wait(TestContext.Current.CancellationToken);
+            return [];
+        }).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
+
+        FolderSize? result1 = null, result2 = null;
+        var thread1 = new Thread(() => result1 = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken));
+        var thread2 = new Thread(() => result2 = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken));
+
+        thread1.Start();
+        Thread.Sleep(100);
+        thread2.Start();
+        Thread.Sleep(100);
+        gate.Set();
+
+        thread1.Join();
+        thread2.Join();
+
+        Assert.Equal(1, mockCallCount);
+        Assert.Equal(result1, result2);
+        Assert.NotNull(result1);
 
         _fileSystemMock.Verify();
     }

@@ -3,6 +3,7 @@ using CalculateFolderSize.Core.Models;
 using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,40 +17,76 @@ namespace CalculateFolderSize.Core.Services;
 internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fileSystem) : IFolderSizeCalculator
 {
     /// <summary>
+    /// 当前对象是否已被释放
+    /// </summary>
+    private bool _disposed;
+
+    /// <summary>
     /// 缓存已计算的文件夹大小结果, 避免重复计算
     /// </summary>
     private readonly ConcurrentDictionary<string, FolderSize> _cache = new();
+
+    /// <summary>
+    /// 用于对每个文件夹路径进行锁定, 避免并发计算同一文件夹
+    /// </summary>
+    private readonly ConcurrentDictionary<string, Lazy<SemaphoreSlim>> _pathLocks = new();
 
     /// <inheritdoc/>
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <inheritdoc/>
-    public int CacheCount => _cache.Count;
+    public int CacheCount
+    {
+        get
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return _cache.Count;
+        }
+    }
 
     /// <inheritdoc/>
     public void ClearCache()
     {
-        _cache.Clear();
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        Clear();
+        PropertyChanged?.Invoke(this, new(nameof(CacheCount)));
     }
 
     /// <inheritdoc/>
-    public Task<FolderSize?> GetFromFolderAsync(string folderPath, IProgress<ProgressReport>? progress = null, CancellationToken token = default)
+    public FolderSize? GetFromFolder(
+        string folderPath,
+        IProgress<ProgressReport>? progress = null,
+        CancellationToken token = default)
     {
-        return Task.Run(() => GetFromFolder(folderPath, progress, token), token);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        token.ThrowIfCancellationRequested();
+        if (!_fileSystem.DirectoryExists(folderPath)) { return null; }
+
+        var state = progress is null ? null : new State(progress);
+        return CalculateSize(folderPath, state, token);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _disposed = true;
+            Clear();
+        }
     }
 
     /// <summary>
-    /// 从指定文件夹获取大小, 如果文件夹不存在则返回 <see langword="null"/>
+    /// 不检查对象是否已被释放, 不触发 <see cref="PropertyChanged"/> 事件, 直接清理缓存和锁定对象
     /// </summary>
-    /// <param name="path">指定的路径</param>
-    /// <param name="progress">进度报告</param>
-    /// <param name="token">取消令牌</param>
-    /// <returns>文件夹大小结果, 如果文件夹不存在则返回 <see langword="null"/></returns>
-    /// <exception cref="OperationCanceledException">当操作被取消时抛出</exception>
-    private FolderSize? GetFromFolder(string path, IProgress<ProgressReport>? progress, CancellationToken token)
+    private void Clear()
     {
-        token.ThrowIfCancellationRequested();
-        return _fileSystem.DirectoryExists(path) ? CalculateSize(path, new(progress), token) : null;
+        foreach (var semaphoreSlim in _pathLocks.Values.Where(l => l.IsValueCreated).Select(l => l.Value))
+        {
+            semaphoreSlim.Dispose();
+        }
+        _pathLocks.Clear();
+        _cache.Clear();
     }
 
     /// <summary>
@@ -58,72 +95,91 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
     /// <param name="folderPath">要计算的文件夹路径</param>
     /// <param name="rootState">计算状态</param>
     /// <param name="token">取消令牌</param>
+    /// <exception cref="ObjectDisposedException">当对象已被释放时抛出</exception>
     /// <exception cref="OperationCanceledException">当操作被取消时抛出</exception>
-    private FolderSize CalculateSize(string folderPath, State rootState, CancellationToken token)
+    private FolderSize CalculateSize(string folderPath, State? rootState, CancellationToken token)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
         if (_cache.TryGetValue(folderPath, out var cachedResult))
         {
-            rootState.Add(cachedResult);
+            rootState?.Add(cachedResult);
             return cachedResult;
         }
 
-        long totalBytes = 0;
-        int folderCount = 0, fileCount = 0;
-        ConcurrentDictionary<string, Exception> errors = new();
+        var semaphoreSlim = _pathLocks.GetOrAdd(folderPath, _ => new(() => new(1, 1))).Value;
+        semaphoreSlim.Wait(token);
 
-        foreach (var file in _fileSystem.EnumerateFiles(folderPath))
+        try
         {
-            token.ThrowIfCancellationRequested();
-            fileCount++;
-            totalBytes += file.Size;
-            if (file.Exception is not null)
+            if (_cache.TryGetValue(folderPath, out cachedResult))
             {
-                _ = errors.TryAdd(file.FullName, file.Exception);
+                rootState?.Add(cachedResult);
+                return cachedResult;
             }
-            rootState.AddFile(file.Size);
+
+            long totalBytes = 0;
+            int folderCount = 0, fileCount = 0;
+            ConcurrentDictionary<string, Exception> errors = new();
+
+            foreach (var file in _fileSystem.EnumerateFiles(folderPath))
+            {
+                token.ThrowIfCancellationRequested();
+                fileCount++;
+                totalBytes += file.Size;
+                if (file.Exception is not null)
+                {
+                    _ = errors.TryAdd(file.FullName, file.Exception);
+                }
+                rootState?.AddFile(file.Size);
+            }
+
+            var subDirs = _fileSystem.EnumerateDirectories(folderPath);
+            var options = new ParallelOptions
+            {
+                CancellationToken = token,
+                MaxDegreeOfParallelism = _options.MaxDegreeOfParallelism
+            };
+
+            _ = Parallel.ForEach(subDirs, options, subDir =>
+            {
+                token.ThrowIfCancellationRequested();
+                try
+                {
+                    var subDirSize = CalculateSize(subDir, rootState, token);
+                    _ = Interlocked.Add(ref totalBytes, subDirSize.TotalBytes);
+                    _ = Interlocked.Add(ref folderCount, subDirSize.FolderCount + 1);
+                    _ = Interlocked.Add(ref fileCount, subDirSize.FileCount);
+                    rootState?.AddFolder();
+                }
+                catch (Exception ex) when (ex is ObjectDisposedException or OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _ = errors.TryAdd(subDir, ex);
+                }
+            });
+
+            var result = new FolderSize(folderPath, totalBytes, folderCount, fileCount, errors);
+            if (_cache.TryAdd(folderPath, result))
+            {
+                PropertyChanged?.Invoke(this, new(nameof(CacheCount)));
+            }
+            return result;
         }
-
-        var subDirs = _fileSystem.EnumerateDirectories(folderPath);
-        var options = new ParallelOptions
+        finally
         {
-            CancellationToken = token,
-            MaxDegreeOfParallelism = _options.MaxDegreeOfParallelism
-        };
-
-        _ = Parallel.ForEach(subDirs, options, subDir =>
-        {
-            token.ThrowIfCancellationRequested();
-            try
-            {
-                var subDirSize = CalculateSize(subDir.FullName, rootState, token);
-                _ = Interlocked.Add(ref totalBytes, subDirSize.TotalBytes);
-                _ = Interlocked.Add(ref folderCount, subDirSize.FolderCount + 1);
-                _ = Interlocked.Add(ref fileCount, subDirSize.FileCount);
-                rootState.AddFolder();
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _ = errors.TryAdd(subDir.FullName, ex);
-            }
-        });
-
-        var result = new FolderSize(folderPath, totalBytes, folderCount, fileCount, errors);
-        if (_cache.TryAdd(folderPath, result))
-        {
-            PropertyChanged?.Invoke(this, new(nameof(CacheCount)));
+            _ = semaphoreSlim.Release();
         }
-        return result;
     }
 
     /// <summary>
     /// 当前计算状态类, 用于报告进度
     /// </summary>
     /// <param name="_progress">进度报告</param>
-    private sealed class State(IProgress<ProgressReport>? _progress)
+    private sealed class State(IProgress<ProgressReport> _progress)
     {
         /// <summary>
         /// 总字节数
@@ -149,7 +205,7 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
             var totalBytes = Interlocked.Add(ref _totalBytes, folderSize.TotalBytes);
             var folderCount = Interlocked.Add(ref _folderCount, folderSize.FolderCount);
             var fileCount = Interlocked.Add(ref _fileCount, folderSize.FileCount);
-            _progress?.Report(new(totalBytes, folderCount, fileCount));
+            _progress.Report(new(totalBytes, folderCount, fileCount));
         }
 
         /// <summary>
@@ -160,7 +216,7 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
         {
             var totalBytes = Interlocked.Add(ref _totalBytes, bytes);
             var fileCount = Interlocked.Increment(ref _fileCount);
-            _progress?.Report(new(totalBytes, _folderCount, fileCount));
+            _progress.Report(new(totalBytes, _folderCount, fileCount));
         }
 
         /// <summary>
@@ -169,7 +225,7 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
         public void AddFolder()
         {
             var folderCount = Interlocked.Increment(ref _folderCount);
-            _progress?.Report(new(_totalBytes, folderCount, _fileCount));
+            _progress.Report(new(_totalBytes, folderCount, _fileCount));
         }
     }
 }

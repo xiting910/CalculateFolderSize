@@ -25,7 +25,8 @@
 
 ## 功能特性
 
-- **快速并行计算**: 使用并行递归算法快速扫描文件夹, 计算总大小、文件数、文件夹数和磁盘占用
+- **快速并行计算**: 使用同步递归 + 并行子目录算法扫描文件夹, 计算总大小、文件数、文件夹数和磁盘占用
+- **并发安全**: 基于 `SemaphoreSlim` 的 per-path 锁机制, 避免并发重复计算同一路径
 - **结果缓存**: 自动缓存已计算的文件夹结果, 避免重复计算, 支持手动清除缓存
 - **跨平台支持**: 统一文件系统实现, 跨 Windows、macOS、Linux 和 Android 平台工作
 - **多平台 UI**:
@@ -45,24 +46,23 @@ CalculateFolderSize/
 │   ├── CalculateFolderSize.Core/           # 核心计算库
 │   │   ├── Interfaces/                     # 核心接口定义
 │   │   │   ├── IFileSizeFormatter.cs       # 文件大小格式化器接口
-│   │   │   ├── IFileSystem.cs              # 文件系统抽象接口
-│   │   │   └── IFolderSizeCalculator.cs    # 文件夹大小计算器接口
+│   │   │   ├── IFileSystem.cs              # 文件系统抽象接口 (internal)
+│   │   │   └── IFolderSizeCalculator.cs    # 文件夹大小计算器接口 (public, 继承 IDisposable)
 │   │   ├── Models/                         # 数据模型
 │   │   │   ├── CoreOptions.cs              # 核心配置选项
-│   │   │   ├── DirectoryEntry.cs           # 目录条目
 │   │   │   ├── FileEntry.cs                # 文件条目
 │   │   │   ├── FolderSize.cs               # 文件夹大小结果
 │   │   │   └── ProgressReport.cs           # 进度报告
 │   │   ├── Services/                       # 服务实现
 │   │   │   ├── FileSizeFormatter.cs        # 文件大小格式化器
 │   │   │   ├── FileSystem.cs               # 统一文件系统实现, 跳过重解析点并逐文件捕获异常
-│   │   │   └── FolderSizeCalculator.cs     # 文件夹大小计算器 (并行递归 + 缓存 + 进度报告)
+│   │   │   └── FolderSizeCalculator.cs     # 文件夹大小计算器 (并行递归 + 缓存 + 并发锁 + 进度报告 + IDisposable)
 │   │   └── IServiceCollectionExtensions.cs # DI 注册扩展
 │   ├── CalculateFolderSize.Cli/            # 命令行工具 (基于 Spectre.Console)
 │   │   ├── App.cs                          # 应用程序主循环 (支持多路径并发计算)
 │   │   ├── CliOptions.cs                   # CLI 配置选项
 │   │   ├── IPathNormalizer.cs              # 路径标准化接口
-│   │   ├── PathNormalizer.cs               # 路径标准化处理
+│   │   ├── PathNormalizer.cs               # 路径标准化实现
 │   │   └── Program.cs                      # 程序入口点
 │   ├── CalculateFolderSize.UI.Shared/      # UI 共享代码 (MVVM, 脚手架)
 │   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (脚手架)
@@ -135,8 +135,7 @@ CLI 工具支持通过 `appsettings.json` 配置:
     "DirectorySeparator": "\\",
     "ReplacedSeparator": "/",
     "ExitCommand": "exit",
-    "ClearCacheCommand": "clearcache",
-    "YesString": "y"
+    "ClearCacheCommand": "clearcache"
   }
 }
 ```
@@ -150,7 +149,6 @@ CLI 工具支持通过 `appsettings.json` 配置:
 | `Cli.ReplacedSeparator`          | 被替换的目录分隔符      | `/`            |
 | `Cli.ExitCommand`                | 退出命令               | `exit`         |
 | `Cli.ClearCacheCommand`          | 清除缓存命令            | `clearcache`   |
-| `Cli.YesString`                  | 确认命令               | `y`            |
 
 ## 许可证
 

@@ -2,6 +2,7 @@ using CalculateFolderSize.Core.Interfaces;
 using CalculateFolderSize.Core.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace CalculateFolderSize.Core.Services;
@@ -12,7 +13,7 @@ namespace CalculateFolderSize.Core.Services;
 internal sealed class FileSystem : IFileSystem
 {
     /// <inheritdoc />
-    public bool DirectoryExists(string path)
+    public bool DirectoryExists([NotNullWhen(true)] string? path)
     {
         return Directory.Exists(path);
     }
@@ -45,7 +46,7 @@ internal sealed class FileSystem : IFileSystem
     }
 
     /// <inheritdoc />
-    public IEnumerable<DirectoryEntry> EnumerateDirectories(string directoryPath)
+    public IEnumerable<string> EnumerateDirectories(string directoryPath)
     {
         var directoryInfo = new DirectoryInfo(directoryPath);
         if (!directoryInfo.Exists)
@@ -59,7 +60,7 @@ internal sealed class FileSystem : IFileSystem
             {
                 continue;
             }
-            yield return new(subDirInfo.FullName);
+            yield return subDirInfo.FullName;
         }
     }
 }

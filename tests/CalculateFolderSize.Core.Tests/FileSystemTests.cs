@@ -61,7 +61,7 @@ public sealed class FileSystemTests
             var tempFile = Path.Combine(tempDir, "test.txt");
             File.WriteAllText(tempFile, content);
 
-            var files = fileSystem.EnumerateFiles(tempDir).ToList();
+            var files = fileSystem.EnumerateFiles(tempDir);
             var file = files.First(f => f.FullName == tempFile);
 
             Assert.Equal(content.Length, file.Size);
@@ -84,10 +84,10 @@ public sealed class FileSystemTests
             var subDir = Path.Combine(tempDir, "subdir");
             _ = Directory.CreateDirectory(subDir);
 
-            var dirs = fileSystem.EnumerateDirectories(tempDir).ToList();
+            var dirs = fileSystem.EnumerateDirectories(tempDir);
 
             Assert.NotEmpty(dirs);
-            Assert.Contains(dirs, d => d.FullName == subDir);
+            Assert.Contains(dirs, d => d == subDir);
         }
         finally
         {
