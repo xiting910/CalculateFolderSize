@@ -21,6 +21,8 @@
 - 项目配置: 集中包管理 (CPM)、可空引用类型、XML 文档生成、.editorconfig
 - CLI 输入处理: 新增 `IUserInputProcessor` 接口与 `UserInputProcessor` 实现, 将多路径解析逻辑从 App 中提取为可单元测试的独立服务
 - CLI 层单元测试: 新增 `AppTests` / `UserInputProcessorTests` / `PathNormalizerTests` / `CliOptionsTests`, 覆盖主循环交互、路径解析、路径标准化与配置加载
+- CoreOptions.PathComparer 配置项: 支持通过配置指定路径比较器 (Ordinal / OrdinalIgnoreCase 等), 默认按平台选择 (Windows 大小写不敏感, 其余平台大小写敏感)
+- Core 层单元测试: 新增 PathComparer 配置映射与回退用例, 新增大小写变体路径的缓存共享/独立计算回归用例
 
 ### Changed
 
@@ -35,6 +37,7 @@
 - **输入解析重构**: `App` 改用注入的 `IUserInputProcessor.ParsePaths` 处理用户输入, 移除内联解析逻辑
 - **状态复用**: `paths` / `validResults` / `tasks` 列表与 `Stopwatch` 移出主循环, 每次迭代前重置, 减少重复分配
 - **CLI 细节**: 输入提示符新增 `>` 前缀; 访问错误汇总新增错误总数显示; 结果括号颜色由 white 调整为 blue
+- **CoreOptions API**: 新增 PathComparer 位置参数, 构造签名由 (int, int) 变更为 (int, int, StringComparer)
 
 ### Removed
 
@@ -43,6 +46,10 @@
 - `App.WaitForKeyPress()` 静态方法 — 替换为实例常量 `WaitForKeyMessage` 配合 Spectre.Console 按键输入
 - `App.ParsePaths` 私有方法 — 解析逻辑移至 `UserInputProcessor` 服务
 - `SmokeTest.cs` — 被覆盖真实场景的 CLI 层单元测试替代
+
+### Fixed
+
+- **Windows 路径大小写重复计算**: 输入 D 与 d 时同一盘符被计算两次, 缓存与路径锁改用平台感知的 PathComparer (Windows 大小写不敏感, 其余平台大小写敏感)
 
 ---
 

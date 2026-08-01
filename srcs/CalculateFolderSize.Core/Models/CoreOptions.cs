@@ -8,7 +8,8 @@ namespace CalculateFolderSize.Core.Models;
 /// </summary>
 /// <param name="MaxDegreeOfParallelism">最大并行度</param>
 /// <param name="DecimalPlaces">小数位数</param>
-public sealed record CoreOptions(int MaxDegreeOfParallelism, int DecimalPlaces)
+/// <param name="PathComparer">路径比较器</param>
+public sealed record CoreOptions(int MaxDegreeOfParallelism, int DecimalPlaces, StringComparer PathComparer)
 {
     /// <summary>
     /// 使用 <see cref="IConfiguration"/> 的构造函数
@@ -35,6 +36,6 @@ public sealed record CoreOptions(int MaxDegreeOfParallelism, int DecimalPlaces)
             decimalPlaces = 2;
         }
 
-        return new(maxDegree, decimalPlaces);
+        return new(maxDegree, decimalPlaces, StringComparer.GetPathComparer(section[nameof(PathComparer)]));
     }
 }

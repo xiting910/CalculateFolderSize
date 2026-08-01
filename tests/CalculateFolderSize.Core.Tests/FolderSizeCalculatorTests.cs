@@ -14,7 +14,7 @@ public sealed class FolderSizeCalculatorTests : IDisposable
     public FolderSizeCalculatorTests()
     {
         _fileSystemMock = new();
-        _options = new(MaxDegreeOfParallelism: Environment.ProcessorCount * 2, DecimalPlaces: 2);
+        _options = new(Environment.ProcessorCount * 2, 2, StringComparer.GetDefault());
         _calculator = new(_options, _fileSystemMock.Object);
     }
 
@@ -200,6 +200,58 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         var result2 = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
         Assert.Equal(result1, result2);
+
+        _fileSystemMock.Verify();
+    }
+
+    [Fact]
+    public void GetFromFolder_CaseVariantPathsWithCaseInsensitiveComparer_ShareCacheEntry()
+    {
+        const string path = @"C:\Dir";
+        const string caseVariantPath = @"c:\dir";
+
+        var options = _options with { PathComparer = StringComparer.OrdinalIgnoreCase };
+        using var calculator = new FolderSizeCalculator(options, _fileSystemMock.Object);
+
+        _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.DirectoryExists(caseVariantPath)).Returns(true).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns([]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
+
+        var result1 = calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
+        var result2 = calculator.GetFromFolder(caseVariantPath, token: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result1);
+        Assert.NotNull(result2);
+        Assert.Equal(result1, result2);
+        Assert.Equal(1, calculator.CacheCount);
+
+        _fileSystemMock.Verify();
+    }
+
+    [Fact]
+    public void GetFromFolder_CaseVariantPathsWithCaseSensitiveComparer_ComputeSeparately()
+    {
+        const string path = @"C:\Dir";
+        const string caseVariantPath = @"c:\dir";
+
+        var options = _options with { PathComparer = StringComparer.Ordinal };
+        using var calculator = new FolderSizeCalculator(options, _fileSystemMock.Object);
+
+        _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.DirectoryExists(caseVariantPath)).Returns(true).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns([]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(caseVariantPath)).Returns([]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(caseVariantPath)).Returns([]).Verifiable(Times.Once);
+
+        var result1 = calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
+        var result2 = calculator.GetFromFolder(caseVariantPath, token: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result1);
+        Assert.NotNull(result2);
+        Assert.NotEqual(result1, result2);
+        Assert.Equal(2, calculator.CacheCount);
 
         _fileSystemMock.Verify();
     }

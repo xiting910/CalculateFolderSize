@@ -57,7 +57,8 @@ CalculateFolderSize/
 │   │   │   ├── FileSizeFormatter.cs        # 文件大小格式化器
 │   │   │   ├── FileSystem.cs               # 统一文件系统实现, 跳过重解析点并逐文件捕获异常
 │   │   │   └── FolderSizeCalculator.cs     # 文件夹大小计算器 (并行递归 + 缓存 + 并发锁 + 进度报告 + IDisposable)
-│   │   └── IServiceCollectionExtensions.cs # DI 注册扩展
+│   │   ├── IServiceCollectionExtensions.cs # DI 注册扩展
+│   │   └── StringComparerExtensions.cs     # 路径比较器扩展 (平台默认与配置名称映射)
 │   ├── CalculateFolderSize.Cli/            # 命令行工具 (基于 Spectre.Console)
 │   │   ├── App.cs                          # 应用程序主循环 (支持多路径并发计算)
 │   │   ├── CliOptions.cs                   # CLI 配置选项
@@ -130,7 +131,8 @@ CLI 工具支持通过 `appsettings.json` 配置:
 {
   "Core": {
     "MaxDegreeOfParallelism": 16,
-    "DecimalPlaces": 2
+    "DecimalPlaces": 2,
+    "PathComparer": "OrdinalIgnoreCase"
   },
   "Cli": {
     "SizeStringLength": 12,
@@ -146,6 +148,7 @@ CLI 工具支持通过 `appsettings.json` 配置:
 | -------------------------------- | ---------------------- | -------------- |
 | `Core.MaxDegreeOfParallelism`    | 最大并行度              | CPU 核心数 x 2 |
 | `Core.DecimalPlaces`             | 文件大小小数位数         | 2              |
+| `Core.PathComparer`               | 路径比较器              | 按平台: Windows 为 OrdinalIgnoreCase, 其余为 Ordinal |
 | `Cli.SizeStringLength`           | 文件大小字符串对齐长度   | 9              |
 | `Cli.DirectorySeparator`         | 目标目录分隔符          | `\`            |
 | `Cli.ReplacedSeparator`          | 被替换的目录分隔符      | `/`            |

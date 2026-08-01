@@ -24,12 +24,12 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
     /// <summary>
     /// 缓存已计算的文件夹大小结果, 避免重复计算
     /// </summary>
-    private readonly ConcurrentDictionary<string, FolderSize> _cache = new();
+    private readonly ConcurrentDictionary<string, FolderSize> _cache = new(_options.PathComparer);
 
     /// <summary>
     /// 用于对每个文件夹路径进行锁定, 避免并发计算同一文件夹
     /// </summary>
-    private readonly ConcurrentDictionary<string, Lazy<SemaphoreSlim>> _pathLocks = new();
+    private readonly ConcurrentDictionary<string, Lazy<SemaphoreSlim>> _pathLocks = new(_options.PathComparer);
 
     /// <inheritdoc/>
     public event PropertyChangedEventHandler? PropertyChanged;

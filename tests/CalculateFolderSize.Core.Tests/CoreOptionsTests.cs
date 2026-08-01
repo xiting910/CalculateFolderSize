@@ -23,6 +23,21 @@ public sealed class CoreOptionsTests
     }
 
     [Fact]
+    public void Constructor_WithValidPathComparer_UsesConfiguredComparer()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.PathComparer)}"] = nameof(StringComparer.OrdinalIgnoreCase)
+            })
+            .Build();
+
+        var options = new CoreOptions(config);
+
+        Assert.Same(StringComparer.OrdinalIgnoreCase, options.PathComparer);
+    }
+
+    [Fact]
     public void Constructor_WithInvalidMaxDegreeOfParallelism_FallsBackIndependently()
     {
         var config = new ConfigurationBuilder()
@@ -57,6 +72,21 @@ public sealed class CoreOptionsTests
     }
 
     [Fact]
+    public void Constructor_WithInvalidPathComparer_FallsBackToPlatformDefault()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.PathComparer)}"] = "NotAComparer"
+            })
+            .Build();
+
+        var options = new CoreOptions(config);
+
+        Assert.Same(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal, options.PathComparer);
+    }
+
+    [Fact]
     public void Constructor_WithMissingSection_FallsBackToDefaults()
     {
         var config = new ConfigurationBuilder().Build();
@@ -65,5 +95,6 @@ public sealed class CoreOptionsTests
 
         Assert.Equal(Environment.ProcessorCount * 2, options.MaxDegreeOfParallelism);
         Assert.Equal(2, options.DecimalPlaces);
+        Assert.Same(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal, options.PathComparer);
     }
 }

@@ -1,3 +1,4 @@
+using CalculateFolderSize.Core;
 using Microsoft.Extensions.Configuration;
 
 namespace CalculateFolderSize.Cli.Tests;
@@ -15,7 +16,7 @@ public sealed class CliOptionsTests
             ($"{nameof(CliOptions)}:{nameof(CliOptions.ClearCacheCommand)}", "cc")
         );
 
-        var options = new CliOptions(config, new(4, 2));
+        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
 
         Assert.Equal(15, options.SizeStringLength);
         Assert.Equal('/', options.DirectorySeparator);
@@ -29,7 +30,7 @@ public sealed class CliOptionsTests
     {
         var config = CreateConfig(($"{nameof(CliOptions)}:{nameof(CliOptions.SizeStringLength)}", "0"));
 
-        var options = new CliOptions(config, new(4, 2));
+        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
 
         Assert.Equal(9, options.SizeStringLength);
     }
@@ -39,7 +40,7 @@ public sealed class CliOptionsTests
     {
         var config = CreateConfig();
 
-        var options = new CliOptions(config, new(4, 5));
+        var options = new CliOptions(config, new(4, 5, StringComparer.GetDefault()));
 
         Assert.Equal(12, options.SizeStringLength);
     }
@@ -49,7 +50,7 @@ public sealed class CliOptionsTests
     {
         var config = CreateConfig(($"{nameof(CliOptions)}:{nameof(CliOptions.DirectorySeparator)}", "ab"));
 
-        var options = new CliOptions(config, new(4, 2));
+        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
 
         Assert.Equal('\\', options.DirectorySeparator);
     }
@@ -59,7 +60,7 @@ public sealed class CliOptionsTests
     {
         var config = CreateConfig(($"{nameof(CliOptions)}:{nameof(CliOptions.ReplacedSeparator)}", "x"));
 
-        var options = new CliOptions(config, new(4, 2));
+        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
 
         Assert.Equal('/', options.ReplacedSeparator);
     }
@@ -69,7 +70,7 @@ public sealed class CliOptionsTests
     {
         var config = CreateConfig(($"{nameof(CliOptions)}:{nameof(CliOptions.ExitCommand)}", "   "));
 
-        var options = new CliOptions(config, new(4, 2));
+        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
 
         Assert.Equal("exit", options.ExitCommand);
         Assert.Equal("clearcache", options.ClearCacheCommand);
@@ -80,7 +81,7 @@ public sealed class CliOptionsTests
     {
         var config = new ConfigurationBuilder().Build();
 
-        var options = new CliOptions(config, new(4, 2));
+        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
 
         Assert.Equal(9, options.SizeStringLength);
         Assert.Equal('\\', options.DirectorySeparator);
