@@ -62,14 +62,16 @@ CalculateFolderSize/
 │   │   ├── App.cs                          # 应用程序主循环 (支持多路径并发计算)
 │   │   ├── CliOptions.cs                   # CLI 配置选项
 │   │   ├── IPathNormalizer.cs              # 路径标准化接口
+│   │   ├── IUserInputProcessor.cs          # 用户输入处理接口
 │   │   ├── PathNormalizer.cs               # 路径标准化实现
+│   │   ├── UserInputProcessor.cs           # 用户输入处理实现
 │   │   └── Program.cs                      # 程序入口点
 │   ├── CalculateFolderSize.UI.Shared/      # UI 共享代码 (MVVM, 脚手架)
 │   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (脚手架)
 │   └── CalculateFolderSize.UI.Android/     # Android 应用入口 (脚手架)
 ├── tests/
 │   ├── CalculateFolderSize.Core.Tests/     # Core 层单元测试 (xunit.v3 + Moq, 覆盖 Calculator/FileSystem/Formatter/Options)
-│   └── CalculateFolderSize.Cli.Tests/      # CLI 层冒烟测试
+│   └── CalculateFolderSize.Cli.Tests/      # CLI 层单元测试 (xunit.v3 + Moq, 覆盖 App/输入解析/路径标准化/配置)
 ├── Directory.Build.props                   # 共享 MSBuild 属性
 ├── Directory.Packages.props                # NuGet 依赖集中管理 (CPM)
 ├── CalculateFolderSize.slnx                # 解决方案文件

@@ -26,6 +26,7 @@ file static class Program
             .AddSingleton<CliOptions>()
             .AddSingleton(AnsiConsole.Console)
             .AddSingleton<IPathNormalizer, PathNormalizer>()
+            .AddSingleton<IUserInputProcessor, UserInputProcessor>()
             .AddSingleton<App>()
             .BuildServiceProvider()
             .GetRequiredService<App>();

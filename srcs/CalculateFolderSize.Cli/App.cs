@@ -15,14 +15,14 @@ namespace CalculateFolderSize.Cli;
 /// <param name="_options">Cli 配置</param>
 /// <param name="_console">控制台实例</param>
 /// <param name="_formatter">文件大小格式化器</param>
-/// <param name="_pathNormalizer">路径标准化器</param>
 /// <param name="_calculator">文件夹大小计算器</param>
+/// <param name="_userInputProcessor">用户输入处理器</param>
 internal sealed class App(
     CliOptions _options,
     IAnsiConsole _console,
     IFileSizeFormatter _formatter,
-    IPathNormalizer _pathNormalizer,
-    IFolderSizeCalculator _calculator)
+    IFolderSizeCalculator _calculator,
+    IUserInputProcessor _userInputProcessor)
 {
     /// <summary>
     /// 等待用户按键信息
@@ -37,13 +37,19 @@ internal sealed class App(
         var prompt1 = "请输入要计算大小的文件夹路径, 输入多个路径时用双引号包裹";
         var prompt2 = $"输入 {_options.ExitCommand} 退出, {_options.ClearCacheCommand} 清理缓存";
 
+        List<string> paths = [];
+        List<FolderSize> validResults = [];
+        List<(string Path, Task<FolderSize?> Task)> tasks = [];
+
+        Stopwatch stopwatch = new();
+
         while (true)
         {
             _console.Clear();
             _console.MarkupLine($"[teal]{Markup.Escape(prompt1)}[/]");
             _console.MarkupLine($"[teal]{Markup.Escape(prompt2)}[/]");
 
-            var input = _console.Prompt(new TextPrompt<string>(string.Empty).AllowEmpty());
+            var input = _console.Prompt(new TextPrompt<string>("[teal]>[/]").AllowEmpty());
             if (string.IsNullOrWhiteSpace(input)) { continue; }
 
             if (input.Equals(_options.ExitCommand, StringComparison.OrdinalIgnoreCase))
@@ -59,7 +65,7 @@ internal sealed class App(
                 continue;
             }
 
-            var paths = ParsePaths(input.Trim());
+            _userInputProcessor.ParsePaths(input.Trim(), paths);
             if (paths.Count == 0)
             {
                 _console.MarkupLine("\n[yellow]未输入有效的文件夹路径[/]\n");
@@ -72,14 +78,14 @@ internal sealed class App(
             _console.MarkupLine(
                 $"\n[navy]正在并行计算 [/][olive]{paths.Count}[/]" +
                 $"[navy] 个文件夹的大小 (已缓存 [/][olive]{oldCacheCount}[/]" +
-                $"[navy] 个文件夹计算结果):[/]\n");
+                $"[navy] 个文件夹计算结果):[/]");
             _console.MarkupLine($"[silver]{Markup.Escape(string.Join("\n", paths.Select(p => $"- {p}")))}[/]");
             _console.MarkupLine(string.Empty);
 
-            var stopwatch = Stopwatch.StartNew();
+            stopwatch.Restart();
+            validResults.Clear();
+            tasks.Clear();
 
-            List<FolderSize> validResults = [];
-            List<(string Path, Task<FolderSize?> Task)> tasks = [];
             foreach (var path in paths)
             {
                 tasks.Add((path, Task.Run(() => _calculator.GetFromFolder(path))));
@@ -133,8 +139,10 @@ internal sealed class App(
             var resultsWithErrors = validResults.Where(r => r.ErrorPaths.Count > 0).ToArray();
             if (resultsWithErrors.Length > 0)
             {
+                var errorCount = resultsWithErrors.Sum(r => r.ErrorPaths.Count);
                 _console.Markup(
-                    $"[teal]共 {resultsWithErrors.Length} 个文件夹存在访问错误, 是否查看错误路径? (y/n):[/]");
+                    $"[teal]共 [/][olive]{resultsWithErrors.Length}[/][teal] 个文件夹存在 [/]" +
+                    $"[olive]{errorCount}[/][teal] 个访问错误, 是否查看错误路径? (y/n):[/]");
                 var showErrorsInput = _console.Prompt(new TextPrompt<string>("").AllowEmpty());
                 _console.MarkupLine(string.Empty);
                 if (char.TryParse(showErrorsInput, out var showErrorsChar) && showErrorsChar is 'y' or 'Y')
@@ -186,44 +194,7 @@ internal sealed class App(
             $"[green]{formattedPath}[/]" +
             $"[blue] 包含 [/][aqua]{formattedFileCount}[/][blue] 个文件, [/]" +
             $"[aqua]{formattedFolderCount}[/][blue] 个文件夹, 大小为 [/]" +
-            $"[aqua]{formattedSize}[/][white] ( [/][grey]{formattedSizeInBytes}[/][white] 字节)[/]"
+            $"[aqua]{formattedSize}[/][blue] ( [/][grey]{formattedSizeInBytes}[/][blue] 字节)[/]"
         );
-    }
-
-    /// <summary>
-    /// 双引号字符常量
-    /// </summary>
-    private const char QuoteChar = '"';
-
-    /// <summary>
-    /// 从用户输入中解析文件夹路径并返回标准化的路径列表
-    /// </summary>
-    /// <param name="input">用户输入的原始字符串</param>
-    /// <returns>标准化的文件夹路径列表</returns>
-    private List<string> ParsePaths(ReadOnlySpan<char> input)
-    {
-        var quoteIndices = new List<int>();
-        var temp = input;
-        int index, consumed = 0;
-        while ((index = temp.IndexOf(QuoteChar)) >= 0)
-        {
-            quoteIndices.Add(consumed + index);
-            temp = temp[(index + 1)..];
-            consumed += index + 1;
-        }
-        if (quoteIndices.Count == 0) { return [_pathNormalizer.Normalize(input.ToString())]; }
-
-        var paths = new List<string>();
-        for (var i = 0; i < quoteIndices.Count - 1; i += 2)
-        {
-            var start = quoteIndices[i] + 1;
-            var end = quoteIndices[i + 1];
-            if (start < end)
-            {
-                var path = input[start..end].Trim();
-                if (path.Length > 0) { paths.Add(_pathNormalizer.Normalize(path.ToString())); }
-            }
-        }
-        return paths;
     }
 }
