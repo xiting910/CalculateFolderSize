@@ -28,6 +28,8 @@
 - **快速并行计算**: 使用同步递归 + 并行子目录算法扫描文件夹, 计算总大小、文件数、文件夹数和磁盘占用
 - **并发安全**: 基于 `SemaphoreSlim` 的 per-path 锁机制, 避免并发重复计算同一路径
 - **结果缓存**: 自动缓存已计算的文件夹结果, 避免重复计算, 支持手动清除缓存
+- **子项明细查询**: 可选捕获每个文件夹的直接子项 (文件与子文件夹及其大小), 通过 `TryGetFolderChildren` 查询, 为桌面与 Android 的逐层下钻浏览提供数据基础
+- **结构化日志**: 基于 `LoggerMessage` 源生成器的日志事件 (扫描、缓存、错误、取消、清理等), 默认静默, 由消费方 (CLI/UI) 配置输出
 - **跨平台支持**: 统一文件系统实现, 跨 Windows、macOS、Linux 和 Android 平台工作
 - **多平台 UI**:
   - **CLI**: 基于 Spectre.Console 的交互式命令行工具, 支持多路径并发计算, 彩色输出和对齐显示
@@ -46,21 +48,26 @@ CalculateFolderSize/
 │   ├── CalculateFolderSize.Core/           # 核心计算库
 │   │   ├── Interfaces/                     # 核心接口定义
 │   │   │   ├── IFileSizeFormatter.cs       # 文件大小格式化器接口
-│   │   │   ├── IFileSystem.cs              # 文件系统抽象接口 (internal)
-│   │   │   └── IFolderSizeCalculator.cs    # 文件夹大小计算器接口 (public, 继承 IDisposable)
+│   │   │   ├── IFileSystem.cs              # 文件系统抽象接口
+│   │   │   └── IFolderSizeCalculator.cs    # 文件夹大小计算器接口
 │   │   ├── Models/                         # 数据模型
 │   │   │   ├── CoreOptions.cs              # 核心配置选项
+│   │   │   ├── DirectoryChild.cs           # 文件夹子项
+│   │   │   ├── DirectoryEntry.cs           # 目录条目
+│   │   │   ├── FileChild.cs                # 文件子项
 │   │   │   ├── FileEntry.cs                # 文件条目
+│   │   │   ├── FolderChild.cs              # 文件夹子项抽象基类
 │   │   │   ├── FolderSize.cs               # 文件夹大小结果
 │   │   │   └── ProgressReport.cs           # 进度报告
 │   │   ├── Services/                       # 服务实现
+│   │   │   ├── DesktopFileSystem.cs        # 桌面端文件系统实现, 跳过重解析点并逐文件捕获异常
 │   │   │   ├── FileSizeFormatter.cs        # 文件大小格式化器
-│   │   │   ├── FileSystem.cs               # 统一文件系统实现, 跳过重解析点并逐文件捕获异常
-│   │   │   └── FolderSizeCalculator.cs     # 文件夹大小计算器 (并行递归 + 缓存 + 并发锁 + 进度报告 + IDisposable)
+│   │   │   ├── FolderSizeCalculator.cs     # 文件夹大小计算器 (并行递归 + 缓存 + 并发锁 + 进度报告 + IDisposable)
+│   │   │   └── FolderSizeCalculator.Logging.cs # 日志事件定义 (LoggerMessage 源生成器)
 │   │   ├── IServiceCollectionExtensions.cs # DI 注册扩展
-│   │   └── StringComparerExtensions.cs     # 路径比较器扩展 (平台默认与配置名称映射)
+│   │   └── StringComparerExtensions.cs     # 路径比较器扩展
 │   ├── CalculateFolderSize.Cli/            # 命令行工具 (基于 Spectre.Console)
-│   │   ├── App.cs                          # 应用程序主循环 (支持多路径并发计算)
+│   │   ├── App.cs                          # 应用程序主循环
 │   │   ├── CliOptions.cs                   # CLI 配置选项
 │   │   ├── IPathNormalizer.cs              # 路径标准化接口
 │   │   ├── IUserInputProcessor.cs          # 用户输入处理接口
@@ -71,7 +78,7 @@ CalculateFolderSize/
 │   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (脚手架)
 │   └── CalculateFolderSize.UI.Android/     # Android 应用入口 (脚手架)
 ├── tests/
-│   ├── CalculateFolderSize.Core.Tests/     # Core 层单元测试 (xunit.v3 + Moq, 覆盖 Calculator/FileSystem/Formatter/Options)
+│   ├── CalculateFolderSize.Core.Tests/     # Core 层单元测试 (xunit.v3 + Moq, 覆盖 Calculator/子项查询/日志/FileSystem/Formatter/Options)
 │   └── CalculateFolderSize.Cli.Tests/      # CLI 层单元测试 (xunit.v3 + Moq, 覆盖 App/输入解析/路径标准化/配置)
 ├── Directory.Build.props                   # 共享 MSBuild 属性
 ├── Directory.Packages.props                # NuGet 依赖集中管理 (CPM)
@@ -132,6 +139,7 @@ CLI 工具支持通过 `appsettings.json` 配置:
   "Core": {
     "MaxDegreeOfParallelism": 16,
     "DecimalPlaces": 2,
+    "CaptureChildren": false,
     "PathComparer": "OrdinalIgnoreCase"
   },
   "Cli": {
@@ -148,6 +156,7 @@ CLI 工具支持通过 `appsettings.json` 配置:
 | -------------------------------- | ---------------------- | -------------- |
 | `Core.MaxDegreeOfParallelism`    | 最大并行度              | CPU 核心数 x 2 |
 | `Core.DecimalPlaces`             | 文件大小小数位数         | 2              |
+| `Core.CaptureChildren`           | 是否捕获子项明细, 供 UI 逐层下钻查询 | `false` |
 | `Core.PathComparer`               | 路径比较器              | 按平台: Windows 为 OrdinalIgnoreCase, 其余为 Ordinal |
 | `Cli.SizeStringLength`           | 文件大小字符串对齐长度   | 9              |
 | `Cli.DirectorySeparator`         | 目标目录分隔符          | `\`            |

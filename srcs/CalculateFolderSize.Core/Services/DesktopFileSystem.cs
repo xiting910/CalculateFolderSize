@@ -8,9 +8,9 @@ using System.IO;
 namespace CalculateFolderSize.Core.Services;
 
 /// <summary>
-/// 文件系统
+/// 桌面端文件系统
 /// </summary>
-internal sealed class FileSystem : IFileSystem
+internal sealed class DesktopFileSystem : IFileSystem
 {
     /// <inheritdoc />
     public bool DirectoryExists([NotNullWhen(true)] string? path)
@@ -37,12 +37,12 @@ internal sealed class FileSystem : IFileSystem
                 size = 0;
                 exception = ex;
             }
-            yield return new(fileInfo.FullName, size, exception);
+            yield return new(fileInfo.FullName, fileInfo.Name, size, exception);
         }
     }
 
     /// <inheritdoc />
-    public IEnumerable<string> EnumerateDirectories(string directoryPath)
+    public IEnumerable<DirectoryEntry> EnumerateDirectories(string directoryPath)
     {
         var directoryInfo = new DirectoryInfo(directoryPath);
         foreach (var subDirInfo in directoryInfo.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
@@ -51,7 +51,7 @@ internal sealed class FileSystem : IFileSystem
             {
                 continue;
             }
-            yield return subDirInfo.FullName;
+            yield return new(subDirInfo.FullName, subDirInfo.Name);
         }
     }
 }

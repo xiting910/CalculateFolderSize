@@ -2,12 +2,12 @@ using CalculateFolderSize.Core.Services;
 
 namespace CalculateFolderSize.Core.Tests;
 
-public sealed class FileSystemTests
+public sealed class DesktopFileSystemTests
 {
     [Fact]
     public void DirectoryExists_NonExistentPath_ReturnsFalse()
     {
-        var fileSystem = new FileSystem();
+        var fileSystem = new DesktopFileSystem();
         var nonExistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
         var result = fileSystem.DirectoryExists(nonExistentPath);
@@ -18,7 +18,7 @@ public sealed class FileSystemTests
     [Fact]
     public void DirectoryExists_ExistingPath_ReturnsTrue()
     {
-        var fileSystem = new FileSystem();
+        var fileSystem = new DesktopFileSystem();
 
         var result = fileSystem.DirectoryExists(Path.GetTempPath());
 
@@ -28,7 +28,7 @@ public sealed class FileSystemTests
     [Fact]
     public void EnumerateFiles_NonExistentDirectory_ThrowsDirectoryNotFoundException()
     {
-        var fileSystem = new FileSystem();
+        var fileSystem = new DesktopFileSystem();
         var nonExistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
         _ = Assert.Throws<DirectoryNotFoundException>(() =>
@@ -40,7 +40,7 @@ public sealed class FileSystemTests
     [Fact]
     public void EnumerateDirectories_NonExistentDirectory_ThrowsDirectoryNotFoundException()
     {
-        var fileSystem = new FileSystem();
+        var fileSystem = new DesktopFileSystem();
         var nonExistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
         _ = Assert.Throws<DirectoryNotFoundException>(() =>
@@ -52,7 +52,7 @@ public sealed class FileSystemTests
     [Fact]
     public void EnumerateFiles_ExistingDirectory_ReturnsFilesWithCorrectSize()
     {
-        var fileSystem = new FileSystem();
+        var fileSystem = new DesktopFileSystem();
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var tempDirInfo = Directory.CreateDirectory(tempDir);
         try
@@ -76,7 +76,7 @@ public sealed class FileSystemTests
     [Fact]
     public void EnumerateDirectories_ExistingDirectory_ReturnsSubDirectories()
     {
-        var fileSystem = new FileSystem();
+        var fileSystem = new DesktopFileSystem();
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var tempDirInfo = Directory.CreateDirectory(tempDir);
         try
@@ -87,7 +87,7 @@ public sealed class FileSystemTests
             var dirs = fileSystem.EnumerateDirectories(tempDir);
 
             Assert.NotEmpty(dirs);
-            Assert.Contains(dirs, d => d == subDir);
+            Assert.Contains(dirs, d => d.FullName == subDir);
         }
         finally
         {

@@ -11,8 +11,8 @@ public sealed class CoreOptionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.MaxDegreeOfParallelism)}"] = "8",
-                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.DecimalPlaces)}"] = "3"
+                [$"{nameof(Core)}:{nameof(CoreOptions.MaxDegreeOfParallelism)}"] = "8",
+                [$"{nameof(Core)}:{nameof(CoreOptions.DecimalPlaces)}"] = "3"
             })
             .Build();
 
@@ -28,7 +28,7 @@ public sealed class CoreOptionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.PathComparer)}"] = nameof(StringComparer.OrdinalIgnoreCase)
+                [$"{nameof(Core)}:{nameof(CoreOptions.PathComparer)}"] = nameof(StringComparer.OrdinalIgnoreCase)
             })
             .Build();
 
@@ -43,8 +43,8 @@ public sealed class CoreOptionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.MaxDegreeOfParallelism)}"] = "0",
-                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.DecimalPlaces)}"] = "3"
+                [$"{nameof(Core)}:{nameof(CoreOptions.MaxDegreeOfParallelism)}"] = "0",
+                [$"{nameof(Core)}:{nameof(CoreOptions.DecimalPlaces)}"] = "3"
             })
             .Build();
 
@@ -60,8 +60,8 @@ public sealed class CoreOptionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.MaxDegreeOfParallelism)}"] = "4",
-                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.DecimalPlaces)}"] = "-1"
+                [$"{nameof(Core)}:{nameof(CoreOptions.MaxDegreeOfParallelism)}"] = "4",
+                [$"{nameof(Core)}:{nameof(CoreOptions.DecimalPlaces)}"] = "-1"
             })
             .Build();
 
@@ -77,7 +77,7 @@ public sealed class CoreOptionsTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [$"{nameof(CoreOptions)}:{nameof(CoreOptions.PathComparer)}"] = "NotAComparer"
+                [$"{nameof(Core)}:{nameof(CoreOptions.PathComparer)}"] = "NotAComparer"
             })
             .Build();
 

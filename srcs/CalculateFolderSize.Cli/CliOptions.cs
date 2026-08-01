@@ -39,7 +39,7 @@ public sealed record CliOptions(
     /// <returns>创建的 <see cref="CliOptions"/> 实例</returns>
     private static CliOptions Create(IConfiguration configuration, CoreOptions coreOptions)
     {
-        var section = configuration.GetSection(nameof(CliOptions));
+        var section = configuration.GetSection(nameof(Cli));
 
         if (!int.TryParse(section[nameof(SizeStringLength)], out var length) || length <= 0)
         {

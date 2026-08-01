@@ -23,6 +23,13 @@
 - CLI 层单元测试: 新增 `AppTests` / `UserInputProcessorTests` / `PathNormalizerTests` / `CliOptionsTests`, 覆盖主循环交互、路径解析、路径标准化与配置加载
 - CoreOptions.PathComparer 配置项: 支持通过配置指定路径比较器 (Ordinal / OrdinalIgnoreCase 等), 默认按平台选择 (Windows 大小写不敏感, 其余平台大小写敏感)
 - Core 层单元测试: 新增 PathComparer 配置映射与回退用例, 新增大小写变体路径的缓存共享/独立计算回归用例
+- **子项明细查询**: `IFolderSizeCalculator` 新增 `TryGetFolderChildren`, 从捕获的子项缓存中查询指定文件夹的直接子项列表, 为 UI 项目逐层下钻浏览提供数据基础
+- **子项模型**: 新增 `FolderChild` 抽象基类及 `FileChild` / `DirectoryChild` 子类, 以类型区分文件与文件夹, 取代 IsDirectory 标志
+- **子项捕获配置**: `CoreOptions` 新增 `CaptureChildren` 配置项, 扫描时按需捕获子项明细, 默认关闭保持 CLI 零额外开销
+- **目录条目**: 重新引入 `DirectoryEntry` 模型 (携带目录名称), `EnumerateDirectories` 返回 `IEnumerable<DirectoryEntry>`
+- **结构化日志**: 基于 `LoggerMessage` 源生成器的日志事件定义 (扫描开始/完成、缓存命中、目录计算、文件与子目录错误、取消、缓存清理), `FolderSizeCalculator` 注入 `ILogger<FolderSizeCalculator>`, 事件定义以独立分部类维护
+- **CLI 日志基础设施**: `Program` 注册 `AddLogging`, 默认无 provider 静默运行, 由消费方配置输出
+- **日志测试**: 新增记录型 `RecordingLogger` 断言日志事件, 覆盖全部可稳定触发的日志事件
 
 ### Changed
 
@@ -41,6 +48,10 @@
 - **枚举开销优化**: `FileSystem.EnumerateFiles` / `EnumerateDirectories` 移除冗余的目录存在性检查, 该方法为 Core 层内部调用, 已在上层保证目录存在性, 减少重复系统调用
 - **CLI 输出**: 计算完成提示由 "计算完成" 改为 "全部计算完成", 与多路径并发计算的语义一致
 - **文档修正**: `CliOptions.Create` 的 XML 文档中 `</param>>` 笔误修正为 `</param>`
+- **可访问性调整**: `IFileSystem` / `FileEntry` 由 internal 改为 public, 为 Android 等平台注入自定义文件系统实现 (SAF) 预留扩展点
+- **桌面文件系统**: `FileSystem` 重命名为 `DesktopFileSystem`, `AddCore` 新增 `isDesktop` 参数, 非桌面应用由调用方自行注册 `IFileSystem`
+- **CoreOptions 参数**: 位置参数调整为 `(DecimalPlaces, MaxDegreeOfParallelism, CaptureChildren, PathComparer)`
+- **测试适配**: 新增子项捕获与日志生命周期测试; 现有测试同步适配模型与构造签名变更; `FileSystemTests` 重命名为 `DesktopFileSystemTests`
 
 ### Removed
 
@@ -49,6 +60,7 @@
 - `App.WaitForKeyPress()` 静态方法 — 替换为实例常量 `WaitForKeyMessage` 配合 Spectre.Console 按键输入
 - `App.ParsePaths` 私有方法 — 解析逻辑移至 `UserInputProcessor` 服务
 - `SmokeTest.cs` — 被覆盖真实场景的 CLI 层单元测试替代
+- `InternalsVisibleTo("DynamicProxyGenAssembly2")` — `IFileSystem` 公开后 Moq 可直接模拟 public 接口, 不再需要
 
 ### Fixed
 

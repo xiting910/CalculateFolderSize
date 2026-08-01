@@ -9,7 +9,7 @@ namespace CalculateFolderSize.Core.Interfaces;
 /// <summary>
 /// 文件系统接口
 /// </summary>
-internal interface IFileSystem
+public interface IFileSystem
 {
     /// <summary>
     /// 检查指定路径是否存在且为文件夹
@@ -34,5 +34,5 @@ internal interface IFileSystem
     /// <returns>子目录条目集合</returns>
     /// <exception cref="DirectoryNotFoundException">指定的目录不存在</exception>
     /// <exception cref="UnauthorizedAccessException">没有权限访问指定的目录</exception>
-    IEnumerable<string> EnumerateDirectories(string directoryPath);
+    IEnumerable<DirectoryEntry> EnumerateDirectories(string directoryPath);
 }

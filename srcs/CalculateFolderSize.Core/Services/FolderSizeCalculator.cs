@@ -1,8 +1,11 @@
 using CalculateFolderSize.Core.Interfaces;
 using CalculateFolderSize.Core.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +17,11 @@ namespace CalculateFolderSize.Core.Services;
 /// </summary>
 /// <param name="_options">配置选项</param>
 /// <param name="_fileSystem">文件系统抽象</param>
-internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fileSystem) : IFolderSizeCalculator
+/// <param name="_logger">日志记录器</param>
+internal sealed partial class FolderSizeCalculator(
+    CoreOptions _options,
+    IFileSystem _fileSystem,
+    ILogger<FolderSizeCalculator> _logger) : IFolderSizeCalculator
 {
     /// <summary>
     /// 当前对象是否已被释放
@@ -22,14 +29,19 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
     private bool _disposed;
 
     /// <summary>
+    /// 用于对每个文件夹路径进行锁定, 避免并发计算同一文件夹
+    /// </summary>
+    private readonly ConcurrentDictionary<string, Lazy<SemaphoreSlim>> _pathLocks = new(_options.PathComparer);
+
+    /// <summary>
     /// 缓存已计算的文件夹大小结果, 避免重复计算
     /// </summary>
     private readonly ConcurrentDictionary<string, FolderSize> _cache = new(_options.PathComparer);
 
     /// <summary>
-    /// 用于对每个文件夹路径进行锁定, 避免并发计算同一文件夹
+    /// 缓存已计算的文件夹的子项, 避免重复计算
     /// </summary>
-    private readonly ConcurrentDictionary<string, Lazy<SemaphoreSlim>> _pathLocks = new(_options.PathComparer);
+    private readonly ConcurrentDictionary<string, IReadOnlyList<FolderChild>> _childrenCache = new(_options.PathComparer);
 
     /// <inheritdoc/>
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -48,8 +60,11 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
     public void ClearCache()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        var resultCount = _cache.Count;
+        var childrenCount = _childrenCache.Count;
         Clear();
         PropertyChanged?.Invoke(this, new(nameof(CacheCount)));
+        LogCacheCleared(resultCount, childrenCount);
     }
 
     /// <inheritdoc/>
@@ -60,10 +75,32 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         token.ThrowIfCancellationRequested();
-        if (!_fileSystem.DirectoryExists(folderPath)) { return null; }
+        if (!_fileSystem.DirectoryExists(folderPath))
+        {
+            LogDirectoryNotFound(folderPath);
+            return null;
+        }
 
         var state = progress is null ? null : new State(progress);
-        return CalculateSize(folderPath, state, token);
+        LogScanStarted(folderPath);
+        try
+        {
+            var result = CalculateSize(folderPath, state, token);
+            LogScanCompleted(folderPath, result.TotalBytes, result.FileCount, result.FolderCount);
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            LogScanCanceled(folderPath);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetFolderChildren(string folderPath, [MaybeNullWhen(false)] out IReadOnlyList<FolderChild> children)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _childrenCache.TryGetValue(folderPath, out children);
     }
 
     /// <inheritdoc/>
@@ -87,6 +124,7 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
         }
         _pathLocks.Clear();
         _cache.Clear();
+        _childrenCache.Clear();
     }
 
     /// <summary>
@@ -103,6 +141,7 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
 
         if (_cache.TryGetValue(folderPath, out var cachedResult))
         {
+            LogCacheHit(folderPath);
             rootState?.Add(cachedResult);
             return cachedResult;
         }
@@ -114,6 +153,7 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
         {
             if (_cache.TryGetValue(folderPath, out cachedResult))
             {
+                LogCacheHit(folderPath);
                 rootState?.Add(cachedResult);
                 return cachedResult;
             }
@@ -121,6 +161,7 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
             long totalBytes = 0;
             int folderCount = 0, fileCount = 0;
             ConcurrentDictionary<string, Exception> errors = new();
+            ConcurrentBag<FolderChild>? children = _options.CaptureChildren ? new() : null;
 
             foreach (var file in _fileSystem.EnumerateFiles(folderPath))
             {
@@ -130,7 +171,9 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
                 if (file.Exception is not null)
                 {
                     _ = errors.TryAdd(file.FullName, file.Exception);
+                    LogFileSizeFailed(file.FullName, file.Exception);
                 }
+                children?.Add(new FileChild(file));
                 rootState?.AddFile(file.Size);
             }
 
@@ -146,7 +189,7 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
                 token.ThrowIfCancellationRequested();
                 try
                 {
-                    var subDirSize = CalculateSize(subDir, rootState, token);
+                    var subDirSize = CalculateSize(subDir.FullName, rootState, token);
                     _ = Interlocked.Add(ref totalBytes, subDirSize.TotalBytes);
                     _ = Interlocked.Add(ref folderCount, subDirSize.FolderCount + 1);
                     _ = Interlocked.Add(ref fileCount, subDirSize.FileCount);
@@ -154,6 +197,8 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
                     {
                         _ = errors.TryAdd(errorPath, exception);
                     }
+                    LogDirectoryCalculated(subDir.FullName, subDirSize.TotalBytes, subDirSize.FileCount, subDirSize.FolderCount);
+                    children?.Add(new DirectoryChild(subDir.Name, subDirSize));
                     rootState?.AddFolder();
                 }
                 catch (Exception ex) when (ex is ObjectDisposedException or OperationCanceledException)
@@ -162,7 +207,8 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
                 }
                 catch (Exception ex)
                 {
-                    _ = errors.TryAdd(subDir, ex);
+                    _ = errors.TryAdd(subDir.FullName, ex);
+                    LogSubDirectoryFailed(subDir.FullName, ex);
                 }
             });
 
@@ -170,6 +216,13 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
             if (_cache.TryAdd(folderPath, result))
             {
                 PropertyChanged?.Invoke(this, new(nameof(CacheCount)));
+                if (children is not null)
+                {
+                    if (!_childrenCache.TryAdd(folderPath, [.. children]))
+                    {
+                        LogChildrenCacheFailed(folderPath);
+                    }
+                }
             }
             return result;
         }

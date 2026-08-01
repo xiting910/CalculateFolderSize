@@ -21,6 +21,7 @@ file static class Program
             .Build();
 
         var app = new ServiceCollection()
+            .AddLogging()
             .AddSingleton<IConfiguration>(configuration)
             .AddCore()
             .AddSingleton<CliOptions>()

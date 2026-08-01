@@ -1,6 +1,7 @@
 using CalculateFolderSize.Core.Interfaces;
 using CalculateFolderSize.Core.Models;
 using CalculateFolderSize.Core.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace CalculateFolderSize.Core.Tests;
@@ -14,8 +15,8 @@ public sealed class FolderSizeCalculatorTests : IDisposable
     public FolderSizeCalculatorTests()
     {
         _fileSystemMock = new();
-        _options = new(Environment.ProcessorCount * 2, 2, StringComparer.GetDefault());
-        _calculator = new(_options, _fileSystemMock.Object);
+        _options = new(2, Environment.ProcessorCount * 2, false, StringComparer.GetDefault());
+        _calculator = new(_options, _fileSystemMock.Object, NullLogger<FolderSizeCalculator>.Instance);
     }
 
     public void Dispose()
@@ -62,8 +63,8 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         const string path = @"C:\DirWithFiles";
         var files = new[]
         {
-            new FileEntry(@"C:\DirWithFiles\file1.txt", 100, null),
-            new FileEntry(@"C:\DirWithFiles\file2.txt", 200, null)
+            new FileEntry(@"C:\DirWithFiles\file1.txt", "file1.txt", 100, null),
+            new FileEntry(@"C:\DirWithFiles\file2.txt", "file2.txt", 200, null)
         };
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
@@ -89,8 +90,8 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         var exception = new UnauthorizedAccessException("Access denied");
         var files = new[]
         {
-            new FileEntry(@"C:\DirWithErrors\bad_file.txt", 0, exception),
-            new FileEntry(@"C:\DirWithErrors\good_file.txt", 50, null)
+            new FileEntry(@"C:\DirWithErrors\bad_file.txt", "bad_file.txt", 0, exception),
+            new FileEntry(@"C:\DirWithErrors\good_file.txt", "good_file.txt", 50, null)
         };
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
@@ -115,12 +116,12 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         const string subPath = @"C:\Root\SubDir";
         var rootFiles = new[]
         {
-            new FileEntry(@"C:\Root\root_file.txt", 100, null)
+            new FileEntry(@"C:\Root\root_file.txt", "root_file.txt", 100, null)
         };
-        var subDirEntries = new[] { subPath };
+        var subDirEntries = new[] { new DirectoryEntry(subPath, "SubDir") };
         var subDirFiles = new[]
         {
-            new FileEntry(@"C:\Root\SubDir\sub_file.txt", 200, null)
+            new FileEntry(@"C:\Root\SubDir\sub_file.txt", "sub_file.txt", 200, null)
         };
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(rootPath)).Returns(true).Verifiable(Times.Once);
@@ -150,9 +151,9 @@ public sealed class FolderSizeCalculatorTests : IDisposable
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(rootPath)).Returns(true).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(rootPath)).Returns([]).Verifiable(Times.Once);
-        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(rootPath)).Returns([goodPath, badPath]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(rootPath)).Returns([new DirectoryEntry(goodPath, "Good"), new DirectoryEntry(badPath, "Bad")]).Verifiable(Times.Once);
 
-        _fileSystemMock.Setup(fs => fs.EnumerateFiles(goodPath)).Returns([new(goodPath + @"\f.txt", 100, null)]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(goodPath)).Returns([new(goodPath + @"\f.txt", "f.txt", 100, null)]).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(goodPath)).Returns([]).Verifiable(Times.Once);
 
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(badPath)).Throws(exception).Verifiable(Times.Once);
@@ -180,10 +181,10 @@ public sealed class FolderSizeCalculatorTests : IDisposable
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(rootPath)).Returns(true).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(rootPath)).Returns([]).Verifiable(Times.Once);
-        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(rootPath)).Returns([midPath]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(rootPath)).Returns([new DirectoryEntry(midPath, "Mid")]).Verifiable(Times.Once);
 
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(midPath)).Returns([]).Verifiable(Times.Once);
-        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(midPath)).Returns([badPath]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(midPath)).Returns([new DirectoryEntry(badPath, "Bad")]).Verifiable(Times.Once);
 
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(badPath)).Throws(exception).Verifiable(Times.Once);
 
@@ -238,7 +239,7 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         const string caseVariantPath = @"c:\dir";
 
         var options = _options with { PathComparer = StringComparer.OrdinalIgnoreCase };
-        using var calculator = new FolderSizeCalculator(options, _fileSystemMock.Object);
+        using var calculator = new FolderSizeCalculator(options, _fileSystemMock.Object, NullLogger<FolderSizeCalculator>.Instance);
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.DirectoryExists(caseVariantPath)).Returns(true).Verifiable(Times.Once);
@@ -263,7 +264,7 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         const string caseVariantPath = @"c:\dir";
 
         var options = _options with { PathComparer = StringComparer.Ordinal };
-        using var calculator = new FolderSizeCalculator(options, _fileSystemMock.Object);
+        using var calculator = new FolderSizeCalculator(options, _fileSystemMock.Object, NullLogger<FolderSizeCalculator>.Instance);
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.DirectoryExists(caseVariantPath)).Returns(true).Verifiable(Times.Once);
@@ -325,11 +326,11 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         const string subPath = @"C:\Root\SubDir";
         var rootFiles = new[]
         {
-            new FileEntry(@"C:\Root\f1.txt", 100, null),
-            new FileEntry(@"C:\Root\f2.txt", 200, null)
+            new FileEntry(@"C:\Root\f1.txt", "f1.txt", 100, null),
+            new FileEntry(@"C:\Root\f2.txt", "f2.txt", 200, null)
         };
-        var subDirEntries = new[] { subPath };
-        var subDirFiles = new[] { new FileEntry(subPath + @"\f3.txt", 300, null) };
+        var subDirEntries = new[] { new DirectoryEntry(subPath, "SubDir") };
+        var subDirFiles = new[] { new FileEntry(subPath + @"\f3.txt", "f3.txt", 300, null) };
 
         _fileSystemMock.Setup(fs => fs.DirectoryExists(rootPath)).Returns(true).Verifiable(Times.Once);
         _fileSystemMock.Setup(fs => fs.EnumerateFiles(rootPath)).Returns(rootFiles).Verifiable(Times.Once);
@@ -357,9 +358,9 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         const string path = @"C:\Dir";
         var files = new[]
         {
-            new FileEntry(@"C:\Dir\file1.txt", 100, null),
-            new FileEntry(@"C:\Dir\file2.txt", 200, null),
-            new FileEntry(@"C:\Dir\file3.txt", 300, null)
+            new FileEntry(@"C:\Dir\file1.txt", "file1.txt", 100, null),
+            new FileEntry(@"C:\Dir\file2.txt", "file2.txt", 200, null),
+            new FileEntry(@"C:\Dir\file3.txt", "file3.txt", 300, null)
         };
 
         using var cts = new CancellationTokenSource();
@@ -410,6 +411,15 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         Assert.NotNull(result1);
 
         _fileSystemMock.Verify();
+    }
+
+    [Fact]
+    public void GetFromFolder_Disposed_ThrowsObjectDisposedException()
+    {
+        var calculator = new FolderSizeCalculator(_options, _fileSystemMock.Object, NullLogger<FolderSizeCalculator>.Instance);
+        calculator.Dispose();
+
+        _ = Assert.Throws<ObjectDisposedException>(() => calculator.GetFromFolder(@"C:\Dir", token: TestContext.Current.CancellationToken));
     }
 
     private sealed class SynchronousProgress<T>(Action<T> _handler) : IProgress<T>

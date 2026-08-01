@@ -9,14 +9,14 @@ public sealed class CliOptionsTests
     public void Constructor_WithValidConfiguration_UsesConfiguredValues()
     {
         var config = CreateConfig(
-            ($"{nameof(CliOptions)}:{nameof(CliOptions.SizeStringLength)}", "15"),
-            ($"{nameof(CliOptions)}:{nameof(CliOptions.DirectorySeparator)}", "/"),
-            ($"{nameof(CliOptions)}:{nameof(CliOptions.ReplacedSeparator)}", "\\"),
-            ($"{nameof(CliOptions)}:{nameof(CliOptions.ExitCommand)}", "quit"),
-            ($"{nameof(CliOptions)}:{nameof(CliOptions.ClearCacheCommand)}", "cc")
+            ($"{nameof(Cli)}:{nameof(CliOptions.SizeStringLength)}", "15"),
+            ($"{nameof(Cli)}:{nameof(CliOptions.DirectorySeparator)}", "/"),
+            ($"{nameof(Cli)}:{nameof(CliOptions.ReplacedSeparator)}", "\\"),
+            ($"{nameof(Cli)}:{nameof(CliOptions.ExitCommand)}", "quit"),
+            ($"{nameof(Cli)}:{nameof(CliOptions.ClearCacheCommand)}", "cc")
         );
 
-        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
+        var options = new CliOptions(config, new(2, 4, false, StringComparer.GetDefault()));
 
         Assert.Equal(15, options.SizeStringLength);
         Assert.Equal('/', options.DirectorySeparator);
@@ -28,9 +28,9 @@ public sealed class CliOptionsTests
     [Fact]
     public void Constructor_WithInvalidSizeStringLength_FallsBackToCalculatedDefault()
     {
-        var config = CreateConfig(($"{nameof(CliOptions)}:{nameof(CliOptions.SizeStringLength)}", "0"));
+        var config = CreateConfig(($"{nameof(Cli)}:{nameof(CliOptions.SizeStringLength)}", "0"));
 
-        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
+        var options = new CliOptions(config, new(2, 4, false, StringComparer.GetDefault()));
 
         Assert.Equal(9, options.SizeStringLength);
     }
@@ -40,7 +40,7 @@ public sealed class CliOptionsTests
     {
         var config = CreateConfig();
 
-        var options = new CliOptions(config, new(4, 5, StringComparer.GetDefault()));
+        var options = new CliOptions(config, new(5, 4, false, StringComparer.GetDefault()));
 
         Assert.Equal(12, options.SizeStringLength);
     }
@@ -48,9 +48,9 @@ public sealed class CliOptionsTests
     [Fact]
     public void Constructor_WithInvalidDirectorySeparator_FallsBackToBackslash()
     {
-        var config = CreateConfig(($"{nameof(CliOptions)}:{nameof(CliOptions.DirectorySeparator)}", "ab"));
+        var config = CreateConfig(($"{nameof(Cli)}:{nameof(CliOptions.DirectorySeparator)}", "ab"));
 
-        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
+        var options = new CliOptions(config, new(2, 4, false, StringComparer.GetDefault()));
 
         Assert.Equal('\\', options.DirectorySeparator);
     }
@@ -58,9 +58,9 @@ public sealed class CliOptionsTests
     [Fact]
     public void Constructor_WithInvalidReplacedSeparator_FallsBackToForwardSlash()
     {
-        var config = CreateConfig(($"{nameof(CliOptions)}:{nameof(CliOptions.ReplacedSeparator)}", "x"));
+        var config = CreateConfig(($"{nameof(Cli)}:{nameof(CliOptions.ReplacedSeparator)}", "x"));
 
-        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
+        var options = new CliOptions(config, new(2, 4, false, StringComparer.GetDefault()));
 
         Assert.Equal('/', options.ReplacedSeparator);
     }
@@ -68,9 +68,9 @@ public sealed class CliOptionsTests
     [Fact]
     public void Constructor_WithMissingCommands_FallsBackToDefaults()
     {
-        var config = CreateConfig(($"{nameof(CliOptions)}:{nameof(CliOptions.ExitCommand)}", "   "));
+        var config = CreateConfig(($"{nameof(Cli)}:{nameof(CliOptions.ExitCommand)}", "   "));
 
-        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
+        var options = new CliOptions(config, new(2, 4, false, StringComparer.GetDefault()));
 
         Assert.Equal("exit", options.ExitCommand);
         Assert.Equal("clearcache", options.ClearCacheCommand);
@@ -81,7 +81,7 @@ public sealed class CliOptionsTests
     {
         var config = new ConfigurationBuilder().Build();
 
-        var options = new CliOptions(config, new(4, 2, StringComparer.GetDefault()));
+        var options = new CliOptions(config, new(2, 4, false, StringComparer.GetDefault()));
 
         Assert.Equal(9, options.SizeStringLength);
         Assert.Equal('\\', options.DirectorySeparator);

@@ -1,6 +1,8 @@
 using CalculateFolderSize.Core.Models;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
 namespace CalculateFolderSize.Core.Interfaces;
@@ -35,5 +37,17 @@ public interface IFolderSizeCalculator : INotifyPropertyChanged, IDisposable
         string folderPath,
         IProgress<ProgressReport>? progress = null,
         CancellationToken token = default
+    );
+
+    /// <summary>
+    /// 尝试获取指定文件夹路径的子项列表
+    /// </summary>
+    /// <param name="folderPath">指定的文件夹路径</param>
+    /// <param name="children">输出参数, 如果成功则返回文件夹子项列表</param>
+    /// <returns><see langword="true"/> 如果成功获取子项列表, 否则返回 <see langword="false"/></returns>
+    /// <exception cref="ObjectDisposedException">当对象已被释放时抛出</exception>
+    bool TryGetFolderChildren(
+        string folderPath,
+        [MaybeNullWhen(false)] out IReadOnlyList<FolderChild> children
     );
 }
