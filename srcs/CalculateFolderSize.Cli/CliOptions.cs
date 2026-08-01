@@ -35,7 +35,7 @@ public sealed record CliOptions(
     /// 使用 <see cref="CliOptions"/> 和 <see cref="CoreOptions"/> 创建 <see cref="CliOptions"/> 的静态方法
     /// </summary>
     /// <param name="configuration">要使用的 <see cref="IConfiguration"/> 实例</param>
-    /// <param name="coreOptions">要使用的 <see cref="CoreOptions"/>> 实例</param>
+    /// <param name="coreOptions">要使用的 <see cref="CoreOptions"/> 实例</param>
     /// <returns>创建的 <see cref="CliOptions"/> 实例</returns>
     private static CliOptions Create(IConfiguration configuration, CoreOptions coreOptions)
     {

@@ -21,14 +21,10 @@ internal sealed class FileSystem : IFileSystem
     /// <inheritdoc />
     public IEnumerable<FileEntry> EnumerateFiles(string directoryPath)
     {
-        var directoryInfo = new DirectoryInfo(directoryPath);
-        if (!directoryInfo.Exists)
-        {
-            throw new DirectoryNotFoundException($"目录不存在: {directoryPath}");
-        }
-
         long size;
         Exception? exception;
+
+        var directoryInfo = new DirectoryInfo(directoryPath);
         foreach (var fileInfo in directoryInfo.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
         {
             try
@@ -49,11 +45,6 @@ internal sealed class FileSystem : IFileSystem
     public IEnumerable<string> EnumerateDirectories(string directoryPath)
     {
         var directoryInfo = new DirectoryInfo(directoryPath);
-        if (!directoryInfo.Exists)
-        {
-            throw new DirectoryNotFoundException($"目录不存在: {directoryPath}");
-        }
-
         foreach (var subDirInfo in directoryInfo.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
         {
             if ((subDirInfo.Attributes & FileAttributes.ReparsePoint) != 0)

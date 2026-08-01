@@ -150,6 +150,10 @@ internal sealed class FolderSizeCalculator(CoreOptions _options, IFileSystem _fi
                     _ = Interlocked.Add(ref totalBytes, subDirSize.TotalBytes);
                     _ = Interlocked.Add(ref folderCount, subDirSize.FolderCount + 1);
                     _ = Interlocked.Add(ref fileCount, subDirSize.FileCount);
+                    foreach (var (errorPath, exception) in subDirSize.ErrorPaths)
+                    {
+                        _ = errors.TryAdd(errorPath, exception);
+                    }
                     rootState?.AddFolder();
                 }
                 catch (Exception ex) when (ex is ObjectDisposedException or OperationCanceledException)

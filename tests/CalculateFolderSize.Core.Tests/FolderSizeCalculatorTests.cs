@@ -171,6 +171,33 @@ public sealed class FolderSizeCalculatorTests : IDisposable
     }
 
     [Fact]
+    public void GetFromFolder_NestedSubDirectoryThrowsException_ErrorsPropagateToRoot()
+    {
+        const string rootPath = @"C:\Root";
+        const string midPath = @"C:\Root\Mid";
+        const string badPath = @"C:\Root\Mid\Bad";
+        var exception = new UnauthorizedAccessException("Access denied");
+
+        _fileSystemMock.Setup(fs => fs.DirectoryExists(rootPath)).Returns(true).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(rootPath)).Returns([]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(rootPath)).Returns([midPath]).Verifiable(Times.Once);
+
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(midPath)).Returns([]).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(midPath)).Returns([badPath]).Verifiable(Times.Once);
+
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(badPath)).Throws(exception).Verifiable(Times.Once);
+
+        var result = _calculator.GetFromFolder(rootPath, token: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        var (errorPath, errorException) = Assert.Single(result.ErrorPaths);
+        Assert.Equal(badPath, errorPath);
+        Assert.Same(exception, errorException);
+
+        _fileSystemMock.Verify();
+    }
+
+    [Fact]
     public void ClearCache_RemovesAllCachedEntries()
     {
         const string path = @"C:\Dir";

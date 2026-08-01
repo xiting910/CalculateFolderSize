@@ -38,6 +38,9 @@
 - **状态复用**: `paths` / `validResults` / `tasks` 列表与 `Stopwatch` 移出主循环, 每次迭代前重置, 减少重复分配
 - **CLI 细节**: 输入提示符新增 `>` 前缀; 访问错误汇总新增错误总数显示; 结果括号颜色由 white 调整为 blue
 - **CoreOptions API**: 新增 PathComparer 位置参数, 构造签名由 (int, int) 变更为 (int, int, StringComparer)
+- **枚举开销优化**: `FileSystem.EnumerateFiles` / `EnumerateDirectories` 移除冗余的目录存在性检查, 该方法为 Core 层内部调用, 已在上层保证目录存在性, 减少重复系统调用
+- **CLI 输出**: 计算完成提示由 "计算完成" 改为 "全部计算完成", 与多路径并发计算的语义一致
+- **文档修正**: `CliOptions.Create` 的 XML 文档中 `</param>>` 笔误修正为 `</param>`
 
 ### Removed
 
@@ -50,6 +53,7 @@
 ### Fixed
 
 - **Windows 路径大小写重复计算**: 输入 D 与 d 时同一盘符被计算两次, 缓存与路径锁改用平台感知的 PathComparer (Windows 大小写不敏感, 其余平台大小写敏感)
+- **嵌套目录错误未汇总**: 子目录内部产生的访问错误未合并到父级 `ErrorPaths`, 导致 CLI 错误汇总遗漏深层错误; 现子目录结果中的错误在递归时逐级合并至根节点, 并新增三层嵌套错误的回归测试
 
 ---
 

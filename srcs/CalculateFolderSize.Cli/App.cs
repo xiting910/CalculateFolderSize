@@ -130,7 +130,7 @@ internal sealed class App(
                 }
 
                 _console.MarkupLine(
-                    $"\n[lime]计算完成, 总耗时: [/][olive]{stopwatch.Elapsed.TotalSeconds:0.##}[/]" +
+                    $"\n[lime]全部计算完成, 总耗时: [/][olive]{stopwatch.Elapsed.TotalSeconds:0.##}[/]" +
                     $"[lime] 秒, 新缓存 [/][olive]{_calculator.CacheCount - oldCacheCount}[/]" +
                     $"[lime] 个文件夹[/]\n");
             }
