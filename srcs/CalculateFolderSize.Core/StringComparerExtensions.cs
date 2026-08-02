@@ -38,10 +38,6 @@ public static class StringComparerExtensions
             {
                 nameof(StringComparer.Ordinal) => StringComparer.Ordinal,
                 nameof(StringComparer.OrdinalIgnoreCase) => StringComparer.OrdinalIgnoreCase,
-                nameof(StringComparer.CurrentCulture) => StringComparer.CurrentCulture,
-                nameof(StringComparer.CurrentCultureIgnoreCase) => StringComparer.CurrentCultureIgnoreCase,
-                nameof(StringComparer.InvariantCulture) => StringComparer.InvariantCulture,
-                nameof(StringComparer.InvariantCultureIgnoreCase) => StringComparer.InvariantCultureIgnoreCase,
                 _ => GetDefault()
             };
         }

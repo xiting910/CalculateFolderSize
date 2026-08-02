@@ -30,6 +30,7 @@
 - **结构化日志**: 基于 `LoggerMessage` 源生成器的日志事件定义 (扫描开始/完成、缓存命中、目录计算、文件与子目录错误、取消、缓存清理), `FolderSizeCalculator` 注入 `ILogger<FolderSizeCalculator>`, 事件定义以独立分部类维护
 - **CLI 日志基础设施**: `Program` 注册 `AddLogging`, 默认无 provider 静默运行, 由消费方配置输出
 - **日志测试**: 新增记录型 `RecordingLogger` 断言日志事件, 覆盖全部可稳定触发的日志事件
+- **UI.Shared 依赖**: `CalculateFolderSize.UI.Shared` 新增 `Avalonia.Controls.DataGrid` 与 `Microsoft.Extensions.Configuration.Json` 包引用, `Directory.Packages.props` 同步集中管理 DataGrid 版本 (12.1.0)
 
 ### Changed
 
@@ -56,6 +57,7 @@
 - **日志本地化与级别调整**: 日志消息由英文改为中文; `FileSizeFailed` / `SubDirectoryFailed` / `ChildrenCacheFailed` 事件级别由 Debug 提升为 Information, 便于消费方识别问题; `DirectoryCalculated` 事件现覆盖根目录自身的扫描结果
 - **CLI 缓存清理反馈**: `clearcache` 命令适配 `TryClearCache`, 清理被拒绝时输出红色失败提示
 - **测试适配**: 新增计算进行中清理缓存被拒绝的并发测试 (含日志断言与对象释放断言); 现有测试适配 API 重命名与日志事件编号调整
+- **路径比较器选项收紧**: `GetPathComparer` 仅保留 `Ordinal` / `OrdinalIgnoreCase` 两个选项, 移除 `CurrentCulture` / `InvariantCulture` 等区域相关比较器, 避免同一路径在不同区域设置下被识别为不同路径
 
 ### Removed
 
