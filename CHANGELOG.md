@@ -52,6 +52,10 @@
 - **桌面文件系统**: `FileSystem` 重命名为 `DesktopFileSystem`, `AddCore` 新增 `isDesktop` 参数, 非桌面应用由调用方自行注册 `IFileSystem`
 - **CoreOptions 参数**: 位置参数调整为 `(DecimalPlaces, MaxDegreeOfParallelism, CaptureChildren, PathComparer)`
 - **测试适配**: 新增子项捕获与日志生命周期测试; 现有测试同步适配模型与构造签名变更; `FileSystemTests` 重命名为 `DesktopFileSystemTests`
+- **安全缓存清理**: `IFolderSizeCalculator.ClearCache` 改为 `TryClearCache`, 返回布尔值指示是否成功清理; 有计算任务进行中时拒绝清理, 避免计算过程中清空缓存导致结果不准确
+- **日志本地化与级别调整**: 日志消息由英文改为中文; `FileSizeFailed` / `SubDirectoryFailed` / `ChildrenCacheFailed` 事件级别由 Debug 提升为 Information, 便于消费方识别问题; `DirectoryCalculated` 事件现覆盖根目录自身的扫描结果
+- **CLI 缓存清理反馈**: `clearcache` 命令适配 `TryClearCache`, 清理被拒绝时输出红色失败提示
+- **测试适配**: 新增计算进行中清理缓存被拒绝的并发测试 (含日志断言与对象释放断言); 现有测试适配 API 重命名与日志事件编号调整
 
 ### Removed
 

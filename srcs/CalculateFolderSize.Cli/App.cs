@@ -58,8 +58,14 @@ internal sealed class App(
             }
             if (input.Equals(_options.ClearCacheCommand, StringComparison.OrdinalIgnoreCase))
             {
-                _calculator.ClearCache();
-                _console.MarkupLine("\n[lime]缓存已清理[/]\n");
+                if (_calculator.TryClearCache())
+                {
+                    _console.MarkupLine("\n[lime]缓存已清理[/]\n");
+                }
+                else
+                {
+                    _console.MarkupLine("\n[red]清理缓存失败[/]\n");
+                }
                 _console.Markup(WaitForKeyMessage);
                 _ = _console.Input.ReadKey(true);
                 continue;

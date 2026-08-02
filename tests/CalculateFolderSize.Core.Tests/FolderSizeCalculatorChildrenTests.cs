@@ -197,7 +197,7 @@ public sealed class FolderSizeCalculatorChildrenTests : IDisposable
     }
 
     [Fact]
-    public void TryGetFolderChildren_AfterClearCache_ReturnsFalse()
+    public void TryGetFolderChildren_AfterTryClearCache_ReturnsFalse()
     {
         const string path = @"C:\Dir";
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
@@ -206,9 +206,7 @@ public sealed class FolderSizeCalculatorChildrenTests : IDisposable
 
         _ = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
         Assert.True(_calculator.TryGetFolderChildren(path, out _));
-
-        _calculator.ClearCache();
-
+        Assert.True(_calculator.TryClearCache());
         Assert.False(_calculator.TryGetFolderChildren(path, out _));
 
         _fileSystemMock.Verify();

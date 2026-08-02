@@ -8,21 +8,37 @@ using System.Threading;
 namespace CalculateFolderSize.Core.Interfaces;
 
 /// <summary>
-/// 文件夹大小计算器接口
+/// 线程安全的文件夹大小计算器接口
 /// </summary>
 public interface IFolderSizeCalculator : INotifyPropertyChanged, IDisposable
 {
     /// <summary>
-    /// 获取缓存文件夹数
+    /// 获取当前缓存文件夹数的快照
     /// </summary>
     /// <exception cref="ObjectDisposedException">当对象已被释放时抛出</exception>
     int CacheCount { get; }
 
     /// <summary>
-    /// 清理缓存
+    /// 尝试清理缓存
     /// </summary>
+    /// <remarks>
+    /// 该方法在有计算任务正在进行时不会清理缓存, 以避免计算任务出现异常
+    /// </remarks>
+    /// <returns><see langword="true"/> 如果成功清理缓存, 否则返回 <see langword="false"/></returns>
     /// <exception cref="ObjectDisposedException">当对象已被释放时抛出</exception>
-    void ClearCache();
+    bool TryClearCache();
+
+    /// <summary>
+    /// 尝试获取指定文件夹路径的子项列表
+    /// </summary>
+    /// <param name="folderPath">指定的文件夹路径</param>
+    /// <param name="children">输出参数, 如果成功则返回文件夹子项列表</param>
+    /// <returns><see langword="true"/> 如果成功获取子项列表, 否则返回 <see langword="false"/></returns>
+    /// <exception cref="ObjectDisposedException">当对象已被释放时抛出</exception>
+    bool TryGetFolderChildren(
+        string folderPath,
+        [MaybeNullWhen(false)] out IReadOnlyList<FolderChild> children
+    );
 
     /// <summary>
     /// 获取指定文件夹路径的 <see cref="FolderSize"/> 对象
@@ -37,17 +53,5 @@ public interface IFolderSizeCalculator : INotifyPropertyChanged, IDisposable
         string folderPath,
         IProgress<ProgressReport>? progress = null,
         CancellationToken token = default
-    );
-
-    /// <summary>
-    /// 尝试获取指定文件夹路径的子项列表
-    /// </summary>
-    /// <param name="folderPath">指定的文件夹路径</param>
-    /// <param name="children">输出参数, 如果成功则返回文件夹子项列表</param>
-    /// <returns><see langword="true"/> 如果成功获取子项列表, 否则返回 <see langword="false"/></returns>
-    /// <exception cref="ObjectDisposedException">当对象已被释放时抛出</exception>
-    bool TryGetFolderChildren(
-        string folderPath,
-        [MaybeNullWhen(false)] out IReadOnlyList<FolderChild> children
     );
 }

@@ -35,9 +35,10 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
 
         _ = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
-        AssertEvent(1, LogLevel.Information, 1);
         AssertEvent(2, LogLevel.Information, 1);
-        AssertEvent(4, LogLevel.Debug, 0);
+        AssertEvent(8, LogLevel.Information, 1);
+        AssertEvent(3, LogLevel.Debug, 0);
+        AssertEvent(6, LogLevel.Debug, 1);
 
         _fileSystemMock.Verify();
     }
@@ -53,9 +54,10 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
         _ = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
         _ = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
-        AssertEvent(1, LogLevel.Information, 2);
         AssertEvent(2, LogLevel.Information, 2);
-        AssertEvent(4, LogLevel.Debug, 1);
+        AssertEvent(8, LogLevel.Information, 2);
+        AssertEvent(3, LogLevel.Debug, 1);
+        AssertEvent(6, LogLevel.Debug, 1);
 
         _fileSystemMock.Verify();
     }
@@ -71,7 +73,7 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
 
         _ = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
-        AssertEventWithException(6, LogLevel.Debug, exception, 1);
+        AssertEventWithException(4, LogLevel.Information, exception, 1);
 
         _fileSystemMock.Verify();
     }
@@ -92,8 +94,8 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
 
         _ = _calculator.GetFromFolder(rootPath, token: TestContext.Current.CancellationToken);
 
-        AssertEvent(5, LogLevel.Debug, 1);
-        AssertEventWithException(7, LogLevel.Debug, exception, 1);
+        AssertEvent(6, LogLevel.Debug, 2);
+        AssertEventWithException(5, LogLevel.Information, exception, 1);
 
         _fileSystemMock.Verify();
     }
@@ -114,13 +116,13 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
         _ = Assert.Throws<OperationCanceledException>(() => _calculator.GetFromFolder(path, token: cts.Token));
 
         AssertEvent(9, LogLevel.Debug, 1);
-        AssertEvent(2, LogLevel.Information, 0);
+        AssertEvent(8, LogLevel.Information, 0);
 
         _fileSystemMock.Verify();
     }
 
     [Fact]
-    public void ClearCache_LogsCacheCleared()
+    public void TryClearCache_LogsCacheCleared()
     {
         const string path = @"C:\Dir";
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
@@ -128,9 +130,43 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
         _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
 
         _ = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
-        _calculator.ClearCache();
+        Assert.True(_calculator.TryClearCache());
 
-        AssertEvent(8, LogLevel.Information, 1);
+        AssertEvent(11, LogLevel.Information, 1);
+
+        _fileSystemMock.Verify();
+    }
+
+    [Fact]
+    public void TryClearCache_WithActiveCalculation_LogsCacheClearedCancelled()
+    {
+        const string path = @"C:\Dir";
+        using var gate = new ManualResetEventSlim(false);
+        using var scanEntered = new ManualResetEventSlim(false);
+        _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns(() =>
+        {
+            scanEntered.Set();
+            gate.Wait(TestContext.Current.CancellationToken);
+            return [];
+        }).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
+
+        FolderSize? result = null;
+        var thread = new Thread(() => result = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken));
+
+        thread.Start();
+        scanEntered.Wait(TestContext.Current.CancellationToken);
+
+        Assert.False(_calculator.TryClearCache());
+        AssertEvent(10, LogLevel.Information, 1);
+
+        gate.Set();
+        thread.Join();
+
+        Assert.NotNull(result);
+        Assert.True(_calculator.TryClearCache());
+        AssertEvent(11, LogLevel.Information, 1);
 
         _fileSystemMock.Verify();
     }
@@ -144,8 +180,8 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
         var result = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
 
         Assert.Null(result);
-        AssertEvent(3, LogLevel.Information, 1);
-        AssertEvent(1, LogLevel.Information, 0);
+        AssertEvent(1, LogLevel.Information, 1);
+        AssertEvent(2, LogLevel.Information, 0);
 
         _fileSystemMock.Verify();
     }
@@ -169,7 +205,7 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
 
         _ = _calculator.GetFromFolder(rootPath, token: TestContext.Current.CancellationToken);
 
-        AssertEvent(5, LogLevel.Debug, 2);
+        AssertEvent(6, LogLevel.Debug, 3);
 
         _fileSystemMock.Verify();
     }

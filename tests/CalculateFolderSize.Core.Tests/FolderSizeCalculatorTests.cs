@@ -199,7 +199,7 @@ public sealed class FolderSizeCalculatorTests : IDisposable
     }
 
     [Fact]
-    public void ClearCache_RemovesAllCachedEntries()
+    public void TryClearCache_RemovesAllCachedEntries()
     {
         const string path = @"C:\Dir";
         _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
@@ -208,9 +208,41 @@ public sealed class FolderSizeCalculatorTests : IDisposable
 
         _ = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken);
         Assert.Equal(1, _calculator.CacheCount);
+        Assert.True(_calculator.TryClearCache());
+        Assert.Equal(0, _calculator.CacheCount);
 
-        _calculator.ClearCache();
+        _fileSystemMock.Verify();
+    }
 
+    [Fact]
+    public void TryClearCache_WithActiveCalculation_ReturnsFalseThenTrue()
+    {
+        const string path = @"C:\Dir";
+        using var gate = new ManualResetEventSlim(false);
+        using var scanEntered = new ManualResetEventSlim(false);
+        _fileSystemMock.Setup(fs => fs.DirectoryExists(path)).Returns(true).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateFiles(path)).Returns(() =>
+        {
+            scanEntered.Set();
+            gate.Wait(TestContext.Current.CancellationToken);
+            return [];
+        }).Verifiable(Times.Once);
+        _fileSystemMock.Setup(fs => fs.EnumerateDirectories(path)).Returns([]).Verifiable(Times.Once);
+
+        FolderSize? result = null;
+        var thread = new Thread(() => result = _calculator.GetFromFolder(path, token: TestContext.Current.CancellationToken));
+
+        thread.Start();
+        scanEntered.Wait(TestContext.Current.CancellationToken);
+
+        Assert.False(_calculator.TryClearCache());
+
+        gate.Set();
+        thread.Join();
+
+        Assert.NotNull(result);
+        Assert.Equal(1, _calculator.CacheCount);
+        Assert.True(_calculator.TryClearCache());
         Assert.Equal(0, _calculator.CacheCount);
 
         _fileSystemMock.Verify();
@@ -420,6 +452,15 @@ public sealed class FolderSizeCalculatorTests : IDisposable
         calculator.Dispose();
 
         _ = Assert.Throws<ObjectDisposedException>(() => calculator.GetFromFolder(@"C:\Dir", token: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void TryClearCache_Disposed_ThrowsObjectDisposedException()
+    {
+        var calculator = new FolderSizeCalculator(_options, _fileSystemMock.Object, NullLogger<FolderSizeCalculator>.Instance);
+        calculator.Dispose();
+
+        _ = Assert.Throws<ObjectDisposedException>(() => calculator.TryClearCache());
     }
 
     private sealed class SynchronousProgress<T>(Action<T> _handler) : IProgress<T>

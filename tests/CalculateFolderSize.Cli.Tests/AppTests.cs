@@ -94,7 +94,22 @@ public sealed class AppTests
     {
         var (console, input) = CreateConsole();
         var calculator = new Mock<IFolderSizeCalculator>();
-        calculator.Setup(c => c.ClearCache()).Verifiable(Times.Once);
+        calculator.Setup(c => c.TryClearCache()).Returns(true).Verifiable(Times.Once);
+        calculator.Setup(GetFromFolder).Verifiable(Times.Never);
+        var app = CreateApp(console.Object, calculator.Object);
+
+        input.Queue("clearcache", "exit");
+        await app.RunAsync();
+
+        calculator.Verify();
+    }
+
+    [Fact]
+    public async Task RunAsync_ClearCacheCommand_WhenClearRefused_ShowsWarning()
+    {
+        var (console, input) = CreateConsole();
+        var calculator = new Mock<IFolderSizeCalculator>();
+        calculator.Setup(c => c.TryClearCache()).Returns(false).Verifiable(Times.Once);
         calculator.Setup(GetFromFolder).Verifiable(Times.Never);
         var app = CreateApp(console.Object, calculator.Object);
 

@@ -29,6 +29,16 @@ internal sealed partial class FolderSizeCalculator(
     private bool _disposed;
 
     /// <summary>
+    /// 正在进行的计算任务数, 不为 0 时不允许清理缓存, 避免在计算过程中清理缓存导致计算结果不准确
+    /// </summary>
+    private int _activeCalculations;
+
+    /// <summary>
+    /// 计算任务数锁
+    /// </summary>
+    private readonly Lock _activeCalculationsLock = new();
+
+    /// <summary>
     /// 用于对每个文件夹路径进行锁定, 避免并发计算同一文件夹
     /// </summary>
     private readonly ConcurrentDictionary<string, Lazy<SemaphoreSlim>> _pathLocks = new(_options.PathComparer);
@@ -57,14 +67,31 @@ internal sealed partial class FolderSizeCalculator(
     }
 
     /// <inheritdoc/>
-    public void ClearCache()
+    public bool TryClearCache()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        var resultCount = _cache.Count;
-        var childrenCount = _childrenCache.Count;
-        Clear();
-        PropertyChanged?.Invoke(this, new(nameof(CacheCount)));
-        LogCacheCleared(resultCount, childrenCount);
+        lock (_activeCalculationsLock)
+        {
+            if (_activeCalculations > 0)
+            {
+                LogCacheClearedCancelled(_activeCalculations);
+                return false;
+            }
+
+            Clear();
+            PropertyChanged?.Invoke(this, new(nameof(CacheCount)));
+            LogCacheCleared();
+            return true;
+        }
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetFolderChildren(
+        string folderPath,
+        [MaybeNullWhen(false)] out IReadOnlyList<FolderChild> children)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _childrenCache.TryGetValue(folderPath, out children);
     }
 
     /// <inheritdoc/>
@@ -81,8 +108,9 @@ internal sealed partial class FolderSizeCalculator(
             return null;
         }
 
-        var state = progress is null ? null : new State(progress);
         LogScanStarted(folderPath);
+        var state = progress is null ? null : new State(progress);
+        lock (_activeCalculationsLock) { _activeCalculations++; }
         try
         {
             var result = CalculateSize(folderPath, state, token);
@@ -94,13 +122,10 @@ internal sealed partial class FolderSizeCalculator(
             LogScanCanceled(folderPath);
             throw;
         }
-    }
-
-    /// <inheritdoc/>
-    public bool TryGetFolderChildren(string folderPath, [MaybeNullWhen(false)] out IReadOnlyList<FolderChild> children)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return _childrenCache.TryGetValue(folderPath, out children);
+        finally
+        {
+            lock (_activeCalculationsLock) { _activeCalculations--; }
+        }
     }
 
     /// <inheritdoc/>
@@ -197,7 +222,6 @@ internal sealed partial class FolderSizeCalculator(
                     {
                         _ = errors.TryAdd(errorPath, exception);
                     }
-                    LogDirectoryCalculated(subDir.FullName, subDirSize.TotalBytes, subDirSize.FileCount, subDirSize.FolderCount);
                     children?.Add(new DirectoryChild(subDir.Name, subDirSize));
                     rootState?.AddFolder();
                 }
@@ -213,6 +237,7 @@ internal sealed partial class FolderSizeCalculator(
             });
 
             var result = new FolderSize(folderPath, totalBytes, folderCount, fileCount, errors);
+            LogDirectoryCalculated(folderPath, totalBytes, fileCount, folderCount);
             if (_cache.TryAdd(folderPath, result))
             {
                 PropertyChanged?.Invoke(this, new(nameof(CacheCount)));
