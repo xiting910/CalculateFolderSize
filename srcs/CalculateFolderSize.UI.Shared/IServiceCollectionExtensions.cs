@@ -1,0 +1,38 @@
+using CalculateFolderSize.UI.Shared.Interfaces;
+using CalculateFolderSize.UI.Shared.Models;
+using CalculateFolderSize.UI.Shared.Services;
+using CalculateFolderSize.UI.Shared.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+
+namespace CalculateFolderSize.UI.Shared;
+
+/// <summary>
+/// UI 共享层服务的 DI 注册扩展方法
+/// </summary>
+public static class IServiceCollectionExtensions
+{
+    /// <summary>
+    /// <see cref="IServiceCollection"/> 类的扩展
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    extension(IServiceCollection services)
+    {
+        /// <summary>
+        /// 注册 UI 共享层的所有服务
+        /// </summary>
+        /// <returns>服务集合</returns>
+        public IServiceCollection AddUIShared()
+        {
+            return services
+                .AddSingleton<UIOptions>()
+                .AddSingleton(TimeProvider.System)
+                .AddTransient<ICalculateProgress, CalculateProgress>()
+                .AddSingleton<IHistoriesStore, HistoriesStore>()
+                .AddSingleton<ISettingsStore, SettingsStore>()
+                .AddSingleton<IMainWindowProvider, MainWindowProvider>()
+                .AddSingleton<MainWindowViewModel>()
+                .AddTransient<SettingsWindowViewModel>();
+        }
+    }
+}

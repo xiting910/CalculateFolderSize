@@ -21,6 +21,7 @@
     - [构建 Android 应用](#构建-android-应用)
     - [运行测试](#运行测试)
   - [配置](#配置)
+    - [桌面应用配置](#桌面应用配置)
   - [许可证](#许可证)
 
 ## 功能特性
@@ -33,7 +34,7 @@
 - **跨平台支持**: 统一文件系统实现, 跨 Windows、macOS、Linux 和 Android 平台工作
 - **多平台 UI**:
   - **CLI**: 基于 Spectre.Console 的交互式命令行工具, 支持多路径并发计算, 彩色输出和对齐显示
-  - **桌面 (Desktop)**: 基于 Avalonia UI 的桌面应用程序
+  - **桌面 (Desktop)**: 基于 Avalonia UI 的桌面应用, 支持多任务并行扫描 (实时进度/速度/耗时, 任务列可排序), 结果窗口逐层下钻浏览, 历史记录与设置持久化, 文件日志自动轮转
   - **Android**: 基于 Avalonia UI 的 Android 应用程序
 - **可读的文件大小**: 自动将字节数转换为 B / KB / MB / GB / TB / PB / EB 等单位
 - **错误容忍**: 遇到无权访问的目录或文件时继续扫描, 计算完成后汇总显示错误信息
@@ -74,8 +75,44 @@ CalculateFolderSize/
 │   │   ├── PathNormalizer.cs               # 路径标准化实现
 │   │   ├── UserInputProcessor.cs           # 用户输入处理实现
 │   │   └── Program.cs                      # 程序入口点
-│   ├── CalculateFolderSize.UI.Shared/      # UI 共享代码 (MVVM, 脚手架)
-│   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (脚手架)
+│   ├── CalculateFolderSize.UI.Shared/      # UI 共享代码 (基于 Avalonia UI 的 MVVM 应用)
+│   │   ├── App.axaml(.cs)                  # 应用程序类, 创建主窗口并应用已保存的主题
+│   │   ├── Constants.cs                    # 常量 (数据/日志目录, 限制范围, 刷新间隔)
+│   │   ├── EnumDescriptionConverter.cs     # 枚举描述文本转换器
+│   │   ├── EnumExtensions.cs               # 枚举扩展 (获取中文描述)
+│   │   ├── IMainWindowProvider.cs          # 主窗口提供器接口
+│   │   ├── IServiceCollectionExtensions.cs # UI 共享层 DI 注册扩展 (AddUIShared)
+│   │   ├── MainWindowProvider.cs           # 主窗口提供器实现
+│   │   ├── SystemOpener.cs                 # 跨平台系统默认方式打开文件/文件夹
+│   │   ├── ViewLocator.cs                  # ViewModel 到 View 的视图定位器
+│   │   ├── Interfaces/                     # 服务接口
+│   │   │   ├── ICalculateProgress.cs       # 计算进度接口
+│   │   │   ├── IHistoriesStore.cs          # 历史记录存储接口
+│   │   │   └── ISettingsStore.cs           # 设置存储接口
+│   │   ├── Models/                         # 数据模型
+│   │   │   ├── CalculateProgressUpdateEventArgs.cs # 进度更新事件参数
+│   │   │   ├── CalculateTaskStatus.cs      # 计算任务状态枚举
+│   │   │   ├── ThemeMode.cs                # 主题模式枚举
+│   │   │   └── UIOptions.cs                # UI 层配置选项
+│   │   ├── Services/                       # 服务实现
+│   │   │   ├── CalculateProgress.cs        # 计算进度 (节流 + EMA 平滑速度)
+│   │   │   ├── HistoriesStore.cs           # 历史记录存储 (AppData/histories.txt)
+│   │   │   └── SettingsStore.cs            # 设置存储 (AppData/settings.json)
+│   │   ├── ViewModels/                     # 视图模型 (CommunityToolkit.Mvvm)
+│   │   │   ├── BreadcrumbItemViewModel.cs  # 结果窗口面包屑条目
+│   │   │   ├── MainWindowViewModel.cs      # 主窗口 (输入列表/历史/任务列表/缓存)
+│   │   │   ├── ResultItemViewModel.cs      # 结果窗口子项
+│   │   │   ├── ResultWindowViewModel.cs    # 结果窗口 (下钻浏览/面包屑导航/排序)
+│   │   │   ├── ScanTaskViewModel.cs        # 单个扫描任务 (执行/进度/状态/取消)
+│   │   │   ├── SettingsWindowViewModel.cs  # 设置窗口 (配置/主题/日志/关于)
+│   │   │   └── ToastViewModelBase.cs       # Toast 短暂提示基类
+│   │   └── Views/                          # 视图 (Avalonia XAML)
+│   │       ├── MainWindow.axaml(.cs)       # 主窗口
+│   │       ├── ResultWindow.axaml(.cs)     # 结果窗口
+│   │       ├── SettingsWindow.axaml(.cs)   # 设置窗口
+│   │       ├── ToastView.axaml(.cs)        # 右下角 Toast 提示
+│   │       └── ToolTipHelper.cs            # ToolTip 辅助
+│   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (服务容器与配置加载, 文件日志与轮转)
 │   └── CalculateFolderSize.UI.Android/     # Android 应用入口 (脚手架)
 ├── tests/
 │   ├── CalculateFolderSize.Core.Tests/     # Core 层单元测试 (xunit.v3 + Moq, 覆盖 Calculator/子项查询/日志/FileSystem/Formatter/Options)
@@ -163,6 +200,18 @@ CLI 工具支持通过 `appsettings.json` 配置:
 | `Cli.ReplacedSeparator`          | 被替换的目录分隔符      | `/`            |
 | `Cli.ExitCommand`                | 退出命令               | `exit`         |
 | `Cli.ClearCacheCommand`          | 清除缓存命令            | `clearcache`   |
+
+### 桌面应用配置
+
+桌面应用从 `%APPDATA%/CalculateFolderSize/settings.json` 读取配置, 可在应用内"设置"窗口中修改. `Core` 配置项含义与 CLI 相同, `UI` 配置项如下:
+
+| 配置项                          | 说明                             | 默认值         |
+| ------------------------------- | -------------------------------- | -------------- |
+| `UI.Level`                      | 日志级别 (None 表示不写日志文件)   | `Information`  |
+| `UI.Theme`                      | 主题模式 (System / Light / Dark) | `System`       |
+| `UI.ThrottleIntervalMilliseconds` | 进度节流间隔 (毫秒)              | `100`          |
+
+日志文件写入 `%APPDATA%/CalculateFolderSize/logs/`, 每次启动时轮转, 仅保留最近 5 个日志文件.
 
 ## 许可证
 

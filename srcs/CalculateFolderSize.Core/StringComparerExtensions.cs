@@ -10,7 +10,8 @@ public static class StringComparerExtensions
     /// <summary>
     /// <see cref="StringComparer"/> 类的扩展
     /// </summary>
-    extension(StringComparer)
+    /// <param name="stringComparer">字符串比较器</param>
+    extension(StringComparer stringComparer)
     {
         /// <summary>
         /// 获取默认的 <see cref="StringComparer"/> 实例
@@ -40,6 +41,21 @@ public static class StringComparerExtensions
                 nameof(StringComparer.OrdinalIgnoreCase) => StringComparer.OrdinalIgnoreCase,
                 _ => GetDefault()
             };
+        }
+
+        /// <summary>
+        /// 将 <see cref="StringComparer"/> 实例转换为 JSON 字符串
+        /// </summary>
+        /// <returns>JSON 字符串</returns>
+        public string ToJsonString()
+        {
+            return ReferenceEquals(stringComparer, StringComparer.Ordinal)
+                ? nameof(StringComparer.Ordinal)
+                : ReferenceEquals(stringComparer, StringComparer.OrdinalIgnoreCase)
+                    ? nameof(StringComparer.OrdinalIgnoreCase)
+                    : OperatingSystem.IsWindows()
+                        ? nameof(StringComparer.OrdinalIgnoreCase)
+                        : nameof(StringComparer.Ordinal);
         }
     }
 }

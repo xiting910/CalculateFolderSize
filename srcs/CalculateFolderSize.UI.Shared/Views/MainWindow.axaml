@@ -1,0 +1,186 @@
+<Window x:Class="CalculateFolderSize.UI.Shared.Views.MainWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
+        xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
+        x:DataType="vm:MainWindowViewModel"
+        Title="CalculateFolderSize"
+        Width="1000" Height="700"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}">
+
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+
+        <!-- 浅色主题 -->
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F2F5FA"/>
+          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#1E5FCC"/>
+          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#2E6FDB"/>
+          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="DangerButtonBackgroundBrush" Color="#FCE8E6"/>
+          <SolidColorBrush x:Key="DangerButtonForegroundBrush" Color="#B3261E"/>
+        </ResourceDictionary>
+
+        <!-- 深色主题 -->
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#1A1D24"/>
+          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#7FB0FF"/>
+          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#4C8DF6"/>
+          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="DangerButtonBackgroundBrush" Color="#4A2222"/>
+          <SolidColorBrush x:Key="DangerButtonForegroundBrush" Color="#FF8A80"/>
+        </ResourceDictionary>
+
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <Panel>
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*,*">
+
+      <!-- 顶部标题栏, 居中显示 -->
+      <Grid Grid.Row="0" Margin="8,8,8,0">
+        <TextBlock Text="CalculateFolderSize" FontSize="18" FontWeight="Bold"
+                   Foreground="{DynamicResource TitleForegroundBrush}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      </Grid>
+
+      <!-- 缓存信息行, 按钮靠右: 清理缓存 在 设置 左侧 -->
+      <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" Margin="8,4">
+        <TextBlock Text="缓存条目: " VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="{Binding CacheCount}" VerticalAlignment="Center"/>
+        <Button Grid.Column="3" Content="清理缓存" Command="{Binding ClearCacheCommand}" VerticalAlignment="Center"
+                Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
+        <Button Grid.Column="4" Content="设置" Command="{Binding OpenSettingsCommand}" VerticalAlignment="Center"/>
+      </Grid>
+
+      <!-- 输入区, 仅保留输入按钮 -->
+      <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="8,4">
+        <TextBox Text="{Binding InputPath}" PlaceholderText="输入文件夹路径..." VerticalAlignment="Center"/>
+        <Button Grid.Column="1" Content="输入" Command="{Binding AddInputCommand}"
+                ToolTip.Tip="{Binding InputTip}" Holding="OnControlHolding"
+                Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
+      </Grid>
+
+      <!-- 输入列表与历史记录 -->
+      <Grid Grid.Row="3" ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="8,4">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <TextBlock Text="待计算文件夹" Margin="0,0,0,4"/>
+          <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="6">
+            <Button Content="开始计算" Command="{Binding StartCalculationsCommand}"
+                    IsDefault="True"
+                    Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
+            <Button Grid.Column="1" Content="浏览文件夹" Command="{Binding PickFoldersCommand}"
+                    Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
+            <Button Grid.Column="2" Content="删除选中" Command="{Binding RemoveSelectedInputCommand}"
+                    Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
+            <Button Grid.Column="3" Content="清空列表" Command="{Binding ClearInputsCommand}"
+                    Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
+          </Grid>
+          <ListBox Grid.Row="2" x:Name="InputPathsListBox"
+                   ItemsSource="{Binding InputPaths}" SelectedItem="{Binding SelectedInputPath, Mode=TwoWay}"
+                   Margin="0,4,0,0"/>
+        </Grid>
+        <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*">
+          <TextBlock Text="历史记录" Margin="0,0,0,4"/>
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+            <Button Content="加入输入列表" Command="{Binding AddFromHistoryCommand}" HorizontalAlignment="Left"
+                    Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
+            <Button Grid.Column="1" Content="删除选中" Command="{Binding RemoveSelectedHistoriesCommand}"
+                    Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
+            <Button Grid.Column="2" Content="清空历史" Command="{Binding ClearHistoryCommand}" HorizontalAlignment="Right"
+                    Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
+          </Grid>
+          <ListBox Grid.Row="2" x:Name="HistoriesListBox" SelectionMode="Multiple"
+                   ItemsSource="{Binding Histories}" SelectionChanged="OnHistoriesSelectionChanged" Margin="0,4,0,0"/>
+        </Grid>
+      </Grid>
+
+      <!-- 任务列表 -->
+      <Grid Grid.Row="4" RowDefinitions="Auto,*" Margin="8,4,8,8">
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+          <TextBlock Text="计算任务"/>
+          <TextBlock Text="任务完成后双击可尝试查看详细结果" FontSize="12" Opacity="0.6" VerticalAlignment="Center"/>
+        </StackPanel>
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Tasks}" AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserResizeColumns="True" CanUserSortColumns="False" CellPointerPressed="OnCellPointerPressed">
+          <DataGrid.Columns>
+            <DataGridTextColumn Binding="{Binding Path}" Width="Auto">
+              <DataGridTextColumn.Header>
+                <TextBlock Text="路径" Tag="Path" Background="Transparent"
+                           VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
+              </DataGridTextColumn.Header>
+            </DataGridTextColumn>
+            <DataGridTemplateColumn Width="Auto">
+              <DataGridTemplateColumn.Header>
+                <TextBlock Text="状态" Tag="StatusText" Background="Transparent"
+                           VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
+              </DataGridTemplateColumn.Header>
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:ScanTaskViewModel">
+                  <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}"
+                             VerticalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Binding="{Binding FoldersScanned}" Width="Auto">
+              <DataGridTextColumn.Header>
+                <TextBlock Text="已扫文件夹" Tag="FoldersScanned" Background="Transparent"
+                           VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
+              </DataGridTextColumn.Header>
+            </DataGridTextColumn>
+            <DataGridTextColumn Binding="{Binding FilesScanned}" Width="Auto">
+              <DataGridTextColumn.Header>
+                <TextBlock Text="已扫文件数" Tag="FilesScanned" Background="Transparent"
+                           VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
+              </DataGridTextColumn.Header>
+            </DataGridTextColumn>
+            <DataGridTextColumn Binding="{Binding BytesText}" Width="Auto">
+              <DataGridTextColumn.Header>
+                <TextBlock Text="大小" Tag="BytesScanned" Background="Transparent"
+                           VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
+              </DataGridTextColumn.Header>
+            </DataGridTextColumn>
+            <DataGridTextColumn Binding="{Binding SpeedText}" Width="Auto">
+              <DataGridTextColumn.Header>
+                <TextBlock Text="速度" Tag="SpeedBytesPerSecond" Background="Transparent"
+                           VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
+              </DataGridTextColumn.Header>
+            </DataGridTextColumn>
+            <DataGridTextColumn Binding="{Binding ElapsedText}" Width="Auto">
+              <DataGridTextColumn.Header>
+                <TextBlock Text="耗时" Tag="Elapsed" Background="Transparent"
+                           VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
+              </DataGridTextColumn.Header>
+            </DataGridTextColumn>
+            <DataGridTextColumn Binding="{Binding StartTimeText}" Width="Auto">
+              <DataGridTextColumn.Header>
+                <TextBlock Text="开始时间" Tag="StartTime" Background="Transparent"
+                           VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
+              </DataGridTextColumn.Header>
+            </DataGridTextColumn>
+            <DataGridTemplateColumn Header="操作" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:ScanTaskViewModel">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Content="{Binding DeleteButtonText}" Command="{Binding DeleteCommand}"
+                            Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
+                  </StackPanel>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Grid>
+
+    </Grid>
+
+    <!-- 右下角 Toast 通知 -->
+    <views:ToastView/>
+
+  </Panel>
+
+</Window>

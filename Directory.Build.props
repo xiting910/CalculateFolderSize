@@ -2,6 +2,9 @@
 
   <!-- 所有项目共用的属性 -->
   <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
@@ -9,6 +12,15 @@
     <ProductName>CalculateFolderSize</ProductName>
     <Author>xiting910</Author>
   </PropertyGroup>
+
+  <!-- 所有项目共用的 AssemblyMetadata -->
+  <ItemGroup>
+    <AssemblyMetadata Include="Author" Value="$(Author)"/>
+    <AssemblyMetadata Include="GitHubUrl" Value="https://github.com/$(Author)/$(ProductName)"/>
+    <AssemblyMetadata Include="License" Value="MIT"/>
+    <AssemblyMetadata Include="ProductName" Value="$(ProductName)"/>
+    <AssemblyMetadata Include="Version" Value="$(Version)"/>
+  </ItemGroup>
 
   <!-- 根据项目名是否以 .Tests 结尾判断是否为测试项目 -->
   <PropertyGroup>

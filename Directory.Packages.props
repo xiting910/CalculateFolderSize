@@ -10,13 +10,16 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
 
+    <!-- NReco.Logging.File -->
+    <PackageVersion Include="NReco.Logging.File" Version="1.4.0" />
+
     <!-- Spectre.Console -->
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
 
     <!-- Avalonia UI 系列 -->
     <PackageVersion Include="Avalonia" Version="12.1.1" />
     <PackageVersion Include="Avalonia.Android" Version="12.1.1" />
-    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
     <PackageVersion Include="Avalonia.Desktop" Version="12.1.1" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.1" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.1" />

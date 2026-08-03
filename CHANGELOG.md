@@ -31,6 +31,19 @@
 - **CLI 日志基础设施**: `Program` 注册 `AddLogging`, 默认无 provider 静默运行, 由消费方配置输出
 - **日志测试**: 新增记录型 `RecordingLogger` 断言日志事件, 覆盖全部可稳定触发的日志事件
 - **UI.Shared 依赖**: `CalculateFolderSize.UI.Shared` 新增 `Avalonia.Controls.DataGrid` 与 `Microsoft.Extensions.Configuration.Json` 包引用, `Directory.Packages.props` 同步集中管理 DataGrid 版本 (12.1.0)
+- **UI 桌面应用实现**: `CalculateFolderSize.UI.Shared` 由脚手架升级为完整 MVVM 应用, 新增主窗口/结果窗口/设置窗口及其 ViewModel、服务与视图, 提供 `AddUIShared` DI 注册与 ViewLocator 视图定位
+  - 主窗口: 待计算路径列表 (输入框添加/系统文件夹选择器/覆盖选中/删除/清空), 历史记录面板 (持久化, 支持多选加入输入列表/删除/清空), 任务列表 DataGrid (路径/状态/已扫文件夹/文件数/大小/速度/耗时/开始时间, 全部列可排序), 运行中任务显示取消按钮, 双击已完成任务打开结果窗口, 缓存条目数实时刷新与一键清理 (Toast 反馈, 不弹窗)
+  - 结果窗口: 基于子项缓存的逐层下钻浏览, 面包屑导航 (返回/跳转任意层级), 名称 (文件夹恒在文件前)/大小/百分比/文件夹数/文件数/错误列与排序, 双击子文件夹进入、双击文件以系统默认方式打开, 可打开当前文件夹到资源管理器
+  - 设置窗口: 计算设置 (小数位数/并行度/捕获子项) 与 UI 配置 (进度节流间隔/日志级别) 保存后重启生效; 主题切换 (跟随系统/浅色/深色) 即时生效并持久化; 日志文件夹打开 (Android 端经 SAF 导出); 关于面板 (产品/版本/作者/许可证/GitHub)
+- **历史记录存储**: 新增 `IHistoriesStore` / `HistoriesStore`, 扫描路径持久化到 AppData 下 `histories.txt`, 按路径比较器去重, 最近路径在前
+- **设置存储**: 新增 `ISettingsStore` / `SettingsStore`, Core/UI 配置持久化到 AppData 下 `settings.json`
+- **进度节流**: 新增 `ICalculateProgress` / `CalculateProgress`, 按可配置间隔节流进度更新, 以 EMA 平滑扫描速度, 完成时上报最终速度
+- **UI 配置模型**: 新增 `UIOptions` (日志级别/主题/进度节流间隔) 及 `CalculateTaskStatus` / `ThemeMode` 枚举, 附带中文描述与枚举转换器
+- **Toast 提示**: 新增 `ToastViewModelBase` 与 `ToastView`, 右下角短暂提示 3 秒后自动消失
+- **系统打开辅助**: 新增 `SystemOpener`, 按平台调用系统默认方式打开文件/文件夹 (Windows/macOS/Linux 系统命令, Android 经 Launcher)
+- **桌面端文件日志**: `Program` 启用 NReco.Logging.File 文件日志, 启动时轮转日志 (latest.log 重命名为时间戳), 仅保留最近 5 个日志文件
+- **程序集元数据**: `Directory.Build.props` 新增版本号 1.0.0 与 AssemblyMetadata (作者/GitHub 仓库/许可证/产品名), 供设置窗口"关于"面板展示
+- **路径比较器序列化**: `StringComparerExtensions` 新增 `ToJsonString`, 供设置持久化路径比较器配置
 
 ### Changed
 
@@ -58,6 +71,11 @@
 - **CLI 缓存清理反馈**: `clearcache` 命令适配 `TryClearCache`, 清理被拒绝时输出红色失败提示
 - **测试适配**: 新增计算进行中清理缓存被拒绝的并发测试 (含日志断言与对象释放断言); 现有测试适配 API 重命名与日志事件编号调整
 - **路径比较器选项收紧**: `GetPathComparer` 仅保留 `Ordinal` / `OrdinalIgnoreCase` 两个选项, 移除 `CurrentCulture` / `InvariantCulture` 等区域相关比较器, 避免同一路径在不同区域设置下被识别为不同路径
+- **UI.Shared 依赖调整**: 移除 `Microsoft.Extensions.Configuration.Json` 包引用, 配置加载职责移至桌面端入口
+- **桌面端配置与 DI**: `Program` 从 AppData 下 `settings.json` 读取配置并构建服务容器 (Logging/Core/UI.Shared), `OutputType` 由 Exe 改为 WinExe
+- **依赖版本**: `Avalonia.Controls.DataGrid` 由 12.1.0 升级至 12.1.2; 新增 NReco.Logging.File 1.4.0 集中管理
+- **CLI 依赖清理**: 移除 `Microsoft.Extensions.Configuration` 冗余包引用
+- **日志事件格式整理**: `FolderSizeCalculator.Logging.cs` 的 `[LoggerMessage]` 特性参数改为多行书写 (纯格式调整, 无行为变化)
 
 ### Removed
 
