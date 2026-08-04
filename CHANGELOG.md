@@ -9,6 +9,19 @@
 
 ## [Unreleased]
 
+---
+
+## [1.0.0] - 2026-08-04
+
+**首个正式发布版本**: 一个基于 .NET 10.0 的跨平台文件夹大小计算工具, 提供 CLI / 桌面 (Avalonia UI) / Android 三端应用.
+
+- **CLI**: 基于 Spectre.Console 的交互式命令行, 支持多路径并发计算与彩色对齐输出
+- **桌面**: 单窗口壳架构的 Avalonia 应用, 多任务并行计算 (实时进度/速度/耗时), 结果逐层下钻浏览, 历史记录与设置持久化, 文件日志自动轮转
+- **Android**: 完整应用入口, 全部文件访问权限引导与内置目录选择器, 发布产物为正式签名 APK
+- **核心引擎**: 并行递归计算 + per-path 并发锁, 结果缓存与子项明细捕获, 结构化日志, 可读文件大小格式化, 错误容忍
+
+下方为自项目初始化以来的完整变更记录.
+
 ### Added
 
 - 初始化项目: 建立基于 .NET 10.0 的跨平台文件夹大小计算工具
@@ -131,4 +144,5 @@
 
 ---
 
-[Unreleased]: https://github.com/xiting910/CalculateFolderSize/commits/main
+[Unreleased]: https://github.com/xiting910/CalculateFolderSize/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/xiting910/CalculateFolderSize/releases/tag/v1.0.0
