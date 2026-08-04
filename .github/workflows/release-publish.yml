@@ -66,46 +66,49 @@ jobs:
           dotnet publish srcs/${{ env.APP_NAME }}.UI.Desktop/${{ env.APP_NAME }}.UI.Desktop.csproj \
             --configuration Release \
             --runtime linux-x64 \
-            --self-contained true \
             --output ./publish/linux-x64
 
           dotnet publish srcs/${{ env.APP_NAME }}.UI.Desktop/${{ env.APP_NAME }}.UI.Desktop.csproj \
             --configuration Release \
             --runtime osx-x64 \
-            --self-contained true \
             --output ./publish/osx-x64
 
           dotnet publish srcs/${{ env.APP_NAME }}.UI.Desktop/${{ env.APP_NAME }}.UI.Desktop.csproj \
             --configuration Release \
             --runtime win-x64 \
-            --self-contained true \
             --output ./publish/win-x64
 
-      # 7. 发布 Android 项目
+      # 7. 从 Secret 解码 Android 签名密钥到项目目录
+      - name: Decode Android keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > srcs/${{ env.APP_NAME }}.UI.Android/android-release.keystore
+
+      # 8. 发布 Android 项目
       - name: Publish Android
         run: |
           dotnet publish srcs/${{ env.APP_NAME }}.UI.Android/${{ env.APP_NAME }}.UI.Android.csproj \
             --configuration Release \
             --output ./publish/android
 
-      # 8. 重命名产物文件
-      - name: Rename artifacts
+      # 9. 打包产物: 单文件发布仍会残留原生依赖 DLL, 将整个发布目录压缩为 zip 供用户下载
+      - name: Package artifacts
         run: |
-          mv ./publish/linux-x64/${{ env.APP_NAME }}.UI.Desktop     ./publish/${{ env.APP_NAME }}-linux-x64
-          mv ./publish/osx-x64/${{ env.APP_NAME }}.UI.Desktop       ./publish/${{ env.APP_NAME }}-osx-x64
-          mv ./publish/win-x64/${{ env.APP_NAME }}.UI.Desktop.exe   ./publish/${{ env.APP_NAME }}-win-x64.exe
-          cp ./publish/android/*-Signed.apk                         ./publish/${{ env.APP_NAME }}-android.apk
+          mkdir -p ./release
+          (cd ./publish/linux-x64 && zip -r -x "*.pdb" -x "*.xml" ../../release/${{ env.APP_NAME }}-linux-x64.zip .)
+          (cd ./publish/osx-x64 && zip -r -x "*.pdb" -x "*.xml" ../../release/${{ env.APP_NAME }}-osx-x64.zip .)
+          (cd ./publish/win-x64 && zip -r -x "*.pdb" -x "*.xml" ../../release/${{ env.APP_NAME }}-win-x64.zip .)
+          cp ./publish/android/*-Signed.apk ./release/${{ env.APP_NAME }}-android.apk
 
-      # 9. 上传产物供后续 job 使用
+      # 10. 上传产物供后续 job 使用
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
           name: app-package
           path: |
-            publish/${{ env.APP_NAME }}-linux-x64
-            publish/${{ env.APP_NAME }}-osx-x64
-            publish/${{ env.APP_NAME }}-win-x64.exe
-            publish/${{ env.APP_NAME }}-android.apk
+            release/${{ env.APP_NAME }}-linux-x64.zip
+            release/${{ env.APP_NAME }}-osx-x64.zip
+            release/${{ env.APP_NAME }}-win-x64.zip
+            release/${{ env.APP_NAME }}-android.apk
           retention-days: 1
 
   # 发布作业: 提取变更日志、生成提交记录、创建 GitHub Release
@@ -202,9 +205,9 @@ jobs:
           name: "v${{ needs.build.outputs.version }} — CalculateFolderSize"
           tag_name: ${{ needs.build.outputs.tag }}
           files: |
-            ${{ env.APP_NAME }}-linux-x64
-            ${{ env.APP_NAME }}-osx-x64
-            ${{ env.APP_NAME }}-win-x64.exe
+            ${{ env.APP_NAME }}-linux-x64.zip
+            ${{ env.APP_NAME }}-osx-x64.zip
+            ${{ env.APP_NAME }}-win-x64.zip
             ${{ env.APP_NAME }}-android.apk
           body: |
             ## 🔧 CalculateFolderSize v${{ needs.build.outputs.version }}
@@ -223,12 +226,13 @@ jobs:
 
             | 平台 | 文件 |
             |------|------|
-            | 🪟 Windows x64 | `${{ env.APP_NAME }}-win-x64.exe` |
-            | 🐧 Linux x64 | `${{ env.APP_NAME }}-linux-x64` |
-            | 🍎 macOS x64 | `${{ env.APP_NAME }}-osx-x64` |
+            | 🪟 Windows x64 | `${{ env.APP_NAME }}-win-x64.zip` |
+            | 🐧 Linux x64 | `${{ env.APP_NAME }}-linux-x64.zip` |
+            | 🍎 macOS x64 | `${{ env.APP_NAME }}-osx-x64.zip` |
             | 📱 Android | `${{ env.APP_NAME }}-android.apk` |
 
-            下载对应平台的文件即可运行。
+            桌面端下载对应平台的压缩包, 解压后运行其中的可执行文件; 安卓端下载 APK 文件, 安装后即可使用。
+            注意：桌面端需先安装 [.NET 10 运行时](https://dotnet.microsoft.com/download/dotnet/10.0) 才能运行。
 
             ### 🔗 链接
 

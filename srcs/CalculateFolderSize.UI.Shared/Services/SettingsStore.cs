@@ -23,14 +23,6 @@ internal sealed partial class SettingsStore(
     UIOptions _uiOptions
 ) : ISettingsStore
 {
-    /// <summary>
-    /// 设置文件路径
-    /// </summary>
-    private readonly string _settingsFilePath = Path.Combine(
-        Constants.AppDataDirectory,
-        Constants.SettingsFileName
-    );
-
     /// <inheritdoc/>
     public async Task UpdateCoreOptionsAsync(Func<CoreOptions, CoreOptions> updateFunc, CancellationToken token = default)
     {
@@ -71,15 +63,15 @@ internal sealed partial class SettingsStore(
 
         try
         {
-            await File.WriteAllTextAsync(_settingsFilePath, jsonString, cancellationToken);
+            await File.WriteAllTextAsync(Constants.SettingsFilePath, jsonString, cancellationToken);
         }
         catch (OperationCanceledException ex)
         {
-            LogSaveSettingsCanceled(_settingsFilePath, ex);
+            LogSaveSettingsCanceled(Constants.SettingsFilePath, ex);
         }
         catch (Exception ex)
         {
-            LogSaveSettingsFailed(_settingsFilePath, ex);
+            LogSaveSettingsFailed(Constants.SettingsFilePath, ex);
         }
     }
 

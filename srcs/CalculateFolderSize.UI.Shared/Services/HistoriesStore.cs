@@ -12,50 +12,28 @@ namespace CalculateFolderSize.UI.Shared.Services;
 /// <summary>
 /// 历史存储
 /// </summary>
-internal sealed partial class HistoriesStore : IHistoriesStore
+/// <remarks>
+/// 构造函数
+/// </remarks>
+/// <param name="_logger">日志记录器</param>
+/// <param name="_coreOptions">核心选项</param>
+internal sealed partial class HistoriesStore(ILogger<HistoriesStore> _logger, CoreOptions _coreOptions) : IHistoriesStore
 {
-    /// <summary>
-    /// 日志记录器
-    /// </summary>
-    private readonly ILogger<HistoriesStore> _logger;
-
-    /// <summary>
-    /// 要使用的路径比较器
-    /// </summary>
-    private readonly StringComparer _pathComparer;
-
-    /// <summary>
-    /// 历史记录文件路径
-    /// </summary>
-    private readonly string _historiesFilePath;
-
     /// <summary>
     /// 历史记录列表
     /// </summary>
-    private readonly List<string> _histories;
+    private readonly List<string> _histories = File.Exists(Constants.HistoriesFilePath)
+        ? [.. File.ReadAllLines(Constants.HistoriesFilePath)] : [];
 
     /// <inheritdoc/>
     public IReadOnlyList<string> Histories => _histories;
-
-    /// <summary>
-    /// 构造函数
-    /// </summary>
-    /// <param name="logger">日志记录器</param>
-    /// <param name="coreOptions">核心选项</param>
-    public HistoriesStore(ILogger<HistoriesStore> logger, CoreOptions coreOptions)
-    {
-        _logger = logger;
-        _pathComparer = coreOptions.PathComparer;
-        _historiesFilePath = Path.Combine(Constants.AppDataDirectory, Constants.HistoriesFileName);
-        _histories = File.Exists(_historiesFilePath) ? [.. File.ReadAllLines(_historiesFilePath)] : [];
-    }
 
     /// <inheritdoc/>
     public async Task AddHistoriesAsync(IEnumerable<string> histories, CancellationToken cancellationToken = default)
     {
         foreach (var history in histories)
         {
-            _ = _histories.RemoveAll(h => _pathComparer.Equals(h, history));
+            _ = _histories.RemoveAll(h => _coreOptions.PathComparer.Equals(h, history));
             _histories.Insert(0, history);
         }
 
@@ -68,7 +46,7 @@ internal sealed partial class HistoriesStore : IHistoriesStore
         var removed = 0;
         foreach (var history in histories)
         {
-            removed += _histories.RemoveAll(h => _pathComparer.Equals(h, history));
+            removed += _histories.RemoveAll(h => _coreOptions.PathComparer.Equals(h, history));
         }
         if (removed > 0)
         {
@@ -82,14 +60,14 @@ internal sealed partial class HistoriesStore : IHistoriesStore
         _histories.Clear();
         try
         {
-            if (File.Exists(_historiesFilePath))
+            if (File.Exists(Constants.HistoriesFilePath))
             {
-                File.Delete(_historiesFilePath);
+                File.Delete(Constants.HistoriesFilePath);
             }
         }
         catch (Exception ex)
         {
-            LogClearHistoriesFailed(_historiesFilePath, ex);
+            LogClearHistoriesFailed(Constants.HistoriesFilePath, ex);
         }
     }
 
@@ -101,15 +79,15 @@ internal sealed partial class HistoriesStore : IHistoriesStore
     {
         try
         {
-            await File.WriteAllLinesAsync(_historiesFilePath, _histories, cancellationToken);
+            await File.WriteAllLinesAsync(Constants.HistoriesFilePath, _histories, cancellationToken);
         }
         catch (OperationCanceledException ex)
         {
-            LogSaveHistoriesCanceled(_historiesFilePath, ex);
+            LogSaveHistoriesCanceled(Constants.HistoriesFilePath, ex);
         }
         catch (Exception ex)
         {
-            LogSaveHistoriesFailed(_historiesFilePath, ex);
+            LogSaveHistoriesFailed(Constants.HistoriesFilePath, ex);
         }
     }
 

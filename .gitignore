@@ -2,6 +2,9 @@
 **/bin/
 **/obj/
 
+# 发布产物
+publish/
+
 # IDE & 编辑器
 **/.idea/
 **/.vs/
@@ -18,3 +21,6 @@ TestResults/
 # 操作系统
 .DS_Store
 Thumbs.db
+
+# 密钥
+*.keystore

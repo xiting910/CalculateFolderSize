@@ -38,24 +38,29 @@ public static class Constants
     public static readonly string LogsDirectory = Path.Combine(AppDataDirectory, "logs");
 
     /// <summary>
+    /// 最新日志文件路径
+    /// </summary>
+    public static readonly string LatestLogFilePath = Path.Combine(LogsDirectory, "latest.log");
+
+    /// <summary>
+    /// 设置文件路径
+    /// </summary>
+    public static readonly string SettingsFilePath = Path.Combine(AppDataDirectory, "settings.json");
+
+    /// <summary>
+    /// 历史记录文件路径
+    /// </summary>
+    public static readonly string HistoriesFilePath = Path.Combine(AppDataDirectory, "histories.txt");
+
+    /// <summary>
+    /// 获取日志级别的 Key
+    /// </summary>
+    public const string LogLevelKey = $"{nameof(UI)}:{nameof(Models.UIOptions.Level)}";
+
+    /// <summary>
     /// 日志文件后缀
     /// </summary>
     public const string LogFileExtension = ".log";
-
-    /// <summary>
-    /// 最新日志文件名字
-    /// </summary>
-    public const string LatestLogFileName = "latest" + LogFileExtension;
-
-    /// <summary>
-    /// 设置文件名字
-    /// </summary>
-    public const string SettingsFileName = "settings.json";
-
-    /// <summary>
-    /// 历史记录文件名字
-    /// </summary>
-    public const string HistoriesFileName = "histories.txt";
 
     /// <summary>
     /// ViewModel 类型的后缀名常量

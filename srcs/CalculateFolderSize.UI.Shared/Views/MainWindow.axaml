@@ -4,6 +4,7 @@
         xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
         xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
         x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/logo.ico"
         Title="CalculateFolderSize"
         Width="1000" Height="700"
         WindowStartupLocation="CenterScreen"
@@ -134,7 +135,7 @@
             </DataGridTextColumn>
             <DataGridTextColumn Binding="{Binding FilesScanned}" Width="Auto">
               <DataGridTextColumn.Header>
-                <TextBlock Text="已扫文件数" Tag="FilesScanned" Background="Transparent"
+                <TextBlock Text="已扫文件" Tag="FilesScanned" Background="Transparent"
                            VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
               </DataGridTextColumn.Header>
             </DataGridTextColumn>

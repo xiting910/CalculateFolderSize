@@ -1,7 +1,6 @@
 using Avalonia;
 using CalculateFolderSize.Core;
 using CalculateFolderSize.UI.Shared;
-using CalculateFolderSize.UI.Shared.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,19 +17,6 @@ namespace CalculateFolderSize.UI.Desktop;
 file static class Program
 {
     /// <summary>
-    /// 获取日志级别的 Key
-    /// </summary>
-    private const string LogLevelKey = $"{nameof(UI)}:{nameof(UIOptions.Level)}";
-
-    /// <summary>
-    /// 最新日志文件路径
-    /// </summary>
-    private static readonly string LatestLogFilePath = Path.Combine(
-        Constants.LogsDirectory,
-        Constants.LatestLogFileName
-    );
-
-    /// <summary>
     /// 应用程序入口点
     /// </summary>
     /// <param name="args">命令行参数</param>
@@ -40,16 +26,16 @@ file static class Program
         RotateLogFiles();
 
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(Constants.AppDataDirectory, Constants.SettingsFileName), optional: true)
+            .AddJsonFile(Constants.SettingsFilePath, optional: true)
             .Build();
 
-        if (!Enum.TryParse<LogLevel>(configuration[LogLevelKey], out var level))
+        if (!Enum.TryParse<LogLevel>(configuration[Constants.LogLevelKey], out var level))
         {
             level = LogLevel.Information;
         }
 
         var services = new ServiceCollection()
-            .AddLogging(builder => builder.AddFile(LatestLogFilePath, options => options.MinLevel = level))
+            .AddLogging(builder => builder.AddFile(Constants.LatestLogFilePath, o => o.MinLevel = level))
             .AddSingleton<IConfiguration>(configuration)
             .AddCore()
             .AddUIShared()
@@ -71,16 +57,16 @@ file static class Program
         try
         {
             var logsDirInfo = Directory.CreateDirectory(Constants.LogsDirectory);
-            if (File.Exists(LatestLogFilePath))
+            if (File.Exists(Constants.LatestLogFilePath))
             {
                 var newLogFileName = $"{DateTime.Now:yyyy-MM-dd_HHmmss}{Constants.LogFileExtension}";
-                File.Move(LatestLogFilePath, Path.Combine(Constants.LogsDirectory, newLogFileName));
+                File.Move(Constants.LatestLogFilePath, Path.Combine(Constants.LogsDirectory, newLogFileName));
             }
 
             var oldFiles = logsDirInfo
                 .GetFiles($"*{Constants.LogFileExtension}", SearchOption.TopDirectoryOnly)
                 .Select(f => f.FullName)
-                .Where(path => !path.Equals(LatestLogFilePath, StringComparison.OrdinalIgnoreCase))
+                .Where(path => !path.Equals(Constants.LatestLogFilePath, StringComparison.OrdinalIgnoreCase))
                 .OrderDescending()
                 .Skip(Constants.MaxLogFiles - 1);
 

@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\CalculateFolderSize.UI.Shared\Assets\logo.ico</ApplicationIcon>
     <RuntimeIdentifiers>linux-x64;osx-x64;win-x64</RuntimeIdentifiers>
   </PropertyGroup>
 

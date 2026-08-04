@@ -4,6 +4,7 @@
         xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
         xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
         x:DataType="vm:ResultWindowViewModel"
+        Icon="/Assets/logo.ico"
         Title="{Binding Title}"
         Width="960" Height="620"
         WindowStartupLocation="CenterOwner"

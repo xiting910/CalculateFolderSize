@@ -35,7 +35,7 @@
 - **多平台 UI**:
   - **CLI**: 基于 Spectre.Console 的交互式命令行工具, 支持多路径并发计算, 彩色输出和对齐显示
   - **桌面 (Desktop)**: 基于 Avalonia UI 的桌面应用, 支持多任务并行扫描 (实时进度/速度/耗时, 任务列可排序), 结果窗口逐层下钻浏览, 历史记录与设置持久化, 文件日志自动轮转
-  - **Android**: 基于 Avalonia UI 的 Android 应用程序
+  - **Android**: 基于 Avalonia UI 的 Android 应用, 完整入口 (服务容器注入/文件日志/启动画面), 发布产物为正式签名 APK
 - **可读的文件大小**: 自动将字节数转换为 B / KB / MB / GB / TB / PB / EB 等单位
 - **错误容忍**: 遇到无权访问的目录或文件时继续扫描, 计算完成后汇总显示错误信息
 
@@ -76,6 +76,7 @@ CalculateFolderSize/
 │   │   ├── UserInputProcessor.cs           # 用户输入处理实现
 │   │   └── Program.cs                      # 程序入口点
 │   ├── CalculateFolderSize.UI.Shared/      # UI 共享代码 (基于 Avalonia UI 的 MVVM 应用)
+│   │   ├── Assets/                         # 应用图标 (logo.ico 窗口/exe, Icon.png Android)
 │   │   ├── App.axaml(.cs)                  # 应用程序类, 创建主窗口并应用已保存的主题
 │   │   ├── Constants.cs                    # 常量 (数据/日志目录, 限制范围, 刷新间隔)
 │   │   ├── EnumDescriptionConverter.cs     # 枚举描述文本转换器
@@ -112,8 +113,14 @@ CalculateFolderSize/
 │   │       ├── SettingsWindow.axaml(.cs)   # 设置窗口
 │   │       ├── ToastView.axaml(.cs)        # 右下角 Toast 提示
 │   │       └── ToolTipHelper.cs            # ToolTip 辅助
-│   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (服务容器与配置加载, 文件日志与轮转)
-│   └── CalculateFolderSize.UI.Android/     # Android 应用入口 (脚手架)
+│   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (服务容器与配置加载, 文件日志与轮转, Windows 兼容清单)
+│   │   ├── Program.cs                      # 程序入口点 (配置加载/服务容器/文件日志与轮转)
+│   │   └── app.manifest                    # Windows 应用清单 (supportedOS Windows 10)
+│   └── CalculateFolderSize.UI.Android/     # Android 应用入口 (MainActivity/Application/清单/启动画面资源)
+│       ├── MainActivity.cs                 # Activity 入口 (AvaloniaMainActivity)
+│       ├── Application.cs                  # 应用类 (服务容器注入与文件日志, AvaloniaAndroidApplication<App>)
+│       ├── Properties/AndroidManifest.xml  # 应用清单 (应用名/图标)
+│       └── Resources/                      # Android 资源 (启动画面/主题/颜色/动画)
 ├── tests/
 │   ├── CalculateFolderSize.Core.Tests/     # Core 层单元测试 (xunit.v3 + Moq, 覆盖 Calculator/子项查询/日志/FileSystem/Formatter/Options)
 │   └── CalculateFolderSize.Cli.Tests/      # CLI 层单元测试 (xunit.v3 + Moq, 覆盖 App/输入解析/路径标准化/配置)
@@ -128,7 +135,7 @@ CalculateFolderSize/
 ### 前置要求
 
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- 如需构建 Android 应用, 请安装 Android 工作负载:
+- 如需构建 Android 应用, 请安装 Android 工作负载与本地 Android 构建环境 (JDK 与 Android SDK 需自行安装):
   ```bash
   dotnet workload install android
   ```
@@ -141,7 +148,7 @@ cd CalculateFolderSize
 dotnet build
 ```
 
-也可以使用根目录下的 `ReBuild.bat` 脚本, 自动清理所有 `bin` 和 `obj` 目录后执行完整构建.
+也可以使用根目录下的 `ReBuild.bat` 脚本, 自动清理所有 `bin` / `obj` / `publish` 目录, 执行还原、构建并发布三个平台到根目录 `publish` 文件夹.
 
 ### 运行 CLI 工具
 

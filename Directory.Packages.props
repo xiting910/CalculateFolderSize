@@ -27,6 +27,9 @@
     <!-- MVVM 工具包 -->
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 
+    <!-- Xamarin.AndroidX 系列 -->
+    <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
+
     <!-- 测试框架 -->
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Moq" Version="4.20.72" />

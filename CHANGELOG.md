@@ -44,6 +44,12 @@
 - **桌面端文件日志**: `Program` 启用 NReco.Logging.File 文件日志, 启动时轮转日志 (latest.log 重命名为时间戳), 仅保留最近 5 个日志文件
 - **程序集元数据**: `Directory.Build.props` 新增版本号 1.0.0 与 AssemblyMetadata (作者/GitHub 仓库/许可证/产品名), 供设置窗口"关于"面板展示
 - **路径比较器序列化**: `StringComparerExtensions` 新增 `ToJsonString`, 供设置持久化路径比较器配置
+- **Android 应用入口**: `CalculateFolderSize.UI.Android` 由脚手架升级为完整入口, 新增 `MainActivity` (AvaloniaMainActivity) 与 `Application` (AvaloniaAndroidApplication&lt;App&gt;), 在 `CustomizeAppBuilder` 中构建服务容器并注入 (settings.json 配置加载 / NReco 文件日志 / AddCore / AddUIShared), 与桌面端行为一致
+- **Android 清单与启动画面**: 新增 `AndroidManifest.xml` (应用名/图标) 与 splash 资源 (基于 `Xamarin.AndroidX.Core.SplashScreen` 的 Android 12+ 原生启动画面, 含 v31/night 变体)
+- **应用图标**: UI.Shared 新增 `Assets` (logo.ico / Icon.png), 三个窗口统一设置窗口图标; 桌面端新增 `ApplicationIcon` 嵌入 exe 图标; Android 端经 `AndroidResource` 共享引用 Icon.png (单一来源, 换图标只覆盖一个文件)
+- **桌面端 Windows 兼容清单**: 新增 `app.manifest` (supportedOS Windows 10), 避免窗口透明与嵌入控件问题
+- **Android 发布签名**: 正式 keystore 签名 (密钥经 GitHub Secret `ANDROID_KEYSTORE_B64` 存储, 发布流解码后签名), Release 签名配置带 keystore 存在检查, 本地/发布流正式签名, CI 回退默认签名
+- **ReBuild.bat 重构**: 清理范围扩至 `publish` 文件夹; 流程重排为 restore → build → publish (Cli / UI.Desktop / Android 发布到根目录 `publish`, 均使用 `--no-restore`); 固定工作目录为脚本所在目录
 
 ### Changed
 
@@ -76,6 +82,9 @@
 - **依赖版本**: `Avalonia.Controls.DataGrid` 由 12.1.0 升级至 12.1.2; 新增 NReco.Logging.File 1.4.0 集中管理
 - **CLI 依赖清理**: 移除 `Microsoft.Extensions.Configuration` 冗余包引用
 - **日志事件格式整理**: `FolderSizeCalculator.Logging.cs` 的 `[LoggerMessage]` 特性参数改为多行书写 (纯格式调整, 无行为变化)
+- **发布流**: 桌面端产物由单文件改为整目录压缩 zip (单文件发布仍残留 SkiaSharp/HarfBuzz 等原生 DLL, 需随 exe 分发), zip 内排除 pdb/xml; Android 产物为正式签名 APK
+- **设置窗口**: 主题区块移至最顶端 (即时生效项置顶)
+- **Android 图标资源名**: 资源引用统一为小写 `@drawable/icon` (aapt 资源名强制小写, 物理文件名保持 `Icon.png`)
 
 ### Removed
 
