@@ -94,9 +94,9 @@ jobs:
       - name: Package artifacts
         run: |
           mkdir -p ./release
-          (cd ./publish/linux-x64 && zip -r -x "*.pdb" -x "*.xml" ../../release/${{ env.APP_NAME }}-linux-x64.zip .)
-          (cd ./publish/osx-x64 && zip -r -x "*.pdb" -x "*.xml" ../../release/${{ env.APP_NAME }}-osx-x64.zip .)
-          (cd ./publish/win-x64 && zip -r -x "*.pdb" -x "*.xml" ../../release/${{ env.APP_NAME }}-win-x64.zip .)
+          (cd ./publish/linux-x64 && zip -r ../../release/${{ env.APP_NAME }}-linux-x64.zip . -x "*.pdb" -x "*.xml")
+          (cd ./publish/osx-x64 && zip -r ../../release/${{ env.APP_NAME }}-osx-x64.zip . -x "*.pdb" -x "*.xml")
+          (cd ./publish/win-x64 && zip -r ../../release/${{ env.APP_NAME }}-win-x64.zip . -x "*.pdb" -x "*.xml")
           cp ./publish/android/*-Signed.apk ./release/${{ env.APP_NAME }}-android.apk
 
       # 10. 上传产物供后续 job 使用
