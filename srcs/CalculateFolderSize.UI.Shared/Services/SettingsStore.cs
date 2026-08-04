@@ -15,7 +15,7 @@ namespace CalculateFolderSize.UI.Shared.Services;
 /// 设置存储
 /// </summary>
 /// <param name="_logger">日志记录器</param>
-/// <param name="_coreOptions">核心配置选项</param>
+/// <param name="_coreOptions">Core 配置选项</param>
 /// <param name="_uiOptions">UI 层配置选项</param>
 internal sealed partial class SettingsStore(
     ILogger<SettingsStore> _logger,
@@ -54,9 +54,10 @@ internal sealed partial class SettingsStore(
             },
             [nameof(UI)] = new JsonObject
             {
-                [nameof(UIOptions.Level)] = _uiOptions.Level.ToString(),
                 [nameof(UIOptions.Theme)] = _uiOptions.Theme.ToString(),
-                [nameof(UIOptions.ThrottleIntervalMilliseconds)] = _uiOptions.ThrottleIntervalMilliseconds
+                [nameof(UIOptions.ThrottleIntervalMilliseconds)] = _uiOptions.ThrottleIntervalMilliseconds,
+                [nameof(UIOptions.ToastDurationSeconds)] = _uiOptions.ToastDurationSeconds,
+                [nameof(UIOptions.Level)] = _uiOptions.Level.ToString()
             }
         };
         var jsonString = json.ToJsonString(Constants.JsonSerializerOptions);

@@ -4,12 +4,9 @@ using CalculateFolderSize.Core.Interfaces;
 using CalculateFolderSize.Core.Models;
 using CalculateFolderSize.UI.Shared.Interfaces;
 using CalculateFolderSize.UI.Shared.Models;
-using CalculateFolderSize.UI.Shared.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,15 +14,10 @@ using System.Threading.Tasks;
 namespace CalculateFolderSize.UI.Shared.ViewModels;
 
 /// <summary>
-/// 单个扫描任务视图模型, 负责任务执行、进度统计与状态流转
+/// 计算任务视图模型, 负责任务执行、进度统计与状态流转
 /// </summary>
-public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
+public sealed partial class CalculateTaskViewModel : ObservableObject, IDisposable
 {
-    /// <summary>
-    /// 已打开的结果窗口, 按路径去重
-    /// </summary>
-    private readonly Dictionary<string, ResultWindow> ResultWindows;
-
     /// <summary>
     /// 文件大小格式化器
     /// </summary>
@@ -37,9 +29,9 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     private readonly IFolderSizeCalculator _calculator;
 
     /// <summary>
-    /// 主窗口提供器, 用于消息对话框与窗口所有者
+    /// 壳视图模型, 用于打开结果视图
     /// </summary>
-    private readonly IMainWindowProvider _mainWindowProvider;
+    private readonly ShellViewModel _shell;
 
     /// <summary>
     /// 取消令牌源
@@ -57,7 +49,7 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
-    /// 是否开启子项缓存, 影响是否可以打开结果窗口
+    /// 是否开启子项缓存, 影响是否可以打开结果视图
     /// </summary>
     private readonly bool _captureChildren;
 
@@ -84,25 +76,25 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     public partial DateTimeOffset StartTime { get; set; }
 
     /// <summary>
-    /// 已扫描的字节数
+    /// 已计算的字节数
     /// </summary>
     [ObservableProperty]
-    public partial long BytesScanned { get; set; }
+    public partial long BytesCalculated { get; set; }
 
     /// <summary>
-    /// 已扫描的文件夹数
+    /// 已计算的文件夹数
     /// </summary>
     [ObservableProperty]
-    public partial int FoldersScanned { get; set; }
+    public partial int FoldersCalculated { get; set; }
 
     /// <summary>
-    /// 已扫描的文件数
+    /// 已计算的文件数
     /// </summary>
     [ObservableProperty]
-    public partial int FilesScanned { get; set; }
+    public partial int FilesCalculated { get; set; }
 
     /// <summary>
-    /// 当前扫描速度
+    /// 当前计算速度
     /// </summary>
     [ObservableProperty]
     public partial double SpeedBytesPerSecond { get; set; }
@@ -114,35 +106,34 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     public partial TimeSpan Elapsed { get; set; }
 
     /// <summary>
-    /// 是否可以打开结果窗口
+    /// 是否可以打开结果视图
     /// </summary>
     [ObservableProperty]
     public partial bool CanOpenResult { get; set; }
 
     /// <summary>
-    /// 扫描结果, 完成后可用
+    /// 计算结果, 完成后可用
     /// </summary>
     [ObservableProperty]
     public partial FolderSize? Result { get; set; }
 
     /// <summary>
-    /// 创建扫描任务视图模型
+    /// 创建计算任务视图模型
     /// </summary>
-    public ScanTaskViewModel(
+    public CalculateTaskViewModel(
         CoreOptions coreOptions,
         IFileSizeFormatter formatter,
         IFolderSizeCalculator calculator,
         ICalculateProgress progress,
-        IMainWindowProvider mainWindowProvider,
+        ShellViewModel shell,
         TimeProvider timeProvider,
         string path)
     {
-        ResultWindows = new(coreOptions.PathComparer);
         _formatter = formatter;
         _calculator = calculator;
         _calculator.PropertyChanged += OnCalculatorPropertyChanged;
         _lastSeenCacheCount = _calculator.CacheCount;
-        _mainWindowProvider = mainWindowProvider;
+        _shell = shell;
         _elapsedTimer = new()
         {
             Interval = TimeSpan.FromMilliseconds(Constants.ElapsedUpdateIntervalMilliseconds)
@@ -165,6 +156,7 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
         _calculator.PropertyChanged -= OnCalculatorPropertyChanged;
         _cts.Cancel();
         _cts.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -201,12 +193,12 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     public bool IsCompleted => Status is CalculateTaskStatus.Completed;
 
     /// <summary>
-    /// 已扫描字节数的格式化文本
+    /// 已计算字节数的格式化文本
     /// </summary>
-    public string BytesText => _formatter.Format(BytesScanned);
+    public string BytesText => _formatter.Format(BytesCalculated);
 
     /// <summary>
-    /// 扫描速度的格式化文本
+    /// 计算速度的格式化文本
     /// </summary>
     public string SpeedText => _formatter.Format((long)Math.Round(SpeedBytesPerSecond)) + "/s";
 
@@ -252,16 +244,16 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// 已扫描字节数变化时刷新格式化文本
+    /// 已计算字节数变化时刷新格式化文本
     /// </summary>
     /// <param name="value">新值</param>
-    partial void OnBytesScannedChanged(long value)
+    partial void OnBytesCalculatedChanged(long value)
     {
         OnPropertyChanged(nameof(BytesText));
     }
 
     /// <summary>
-    /// 扫描速度变化时刷新格式化文本
+    /// 计算速度变化时刷新格式化文本
     /// </summary>
     /// <param name="value">新值</param>
     partial void OnSpeedBytesPerSecondChanged(double value)
@@ -281,7 +273,7 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     /// <summary>
     /// 请求删除当前任务的事件, 由持有该任务的视图模型处理
     /// </summary>
-    public event Action<ScanTaskViewModel>? DeleteRequested;
+    public event Action<CalculateTaskViewModel>? DeleteRequested;
 
     /// <summary>
     /// 请求显示短暂提示的事件, 由持有该任务的视图模型处理
@@ -307,30 +299,18 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// 打开结果窗口
+    /// 打开结果视图
     /// </summary>
     public void OpenResult()
     {
         if (Result is null) { return; }
-        if (ResultWindows.TryGetValue(Path, out var existing))
-        {
-            existing.Activate();
-            return;
-        }
-
         if (_calculator.TryGetFolderChildren(Path, out _))
         {
-            var window = new ResultWindow
-            {
-                DataContext = ActivatorUtilities.CreateInstance<ResultWindowViewModel>(App.Services, Path, Result)
-            };
-            window.Closed += (_, _) => _ = ResultWindows.Remove(Path);
-            ResultWindows[Path] = window;
-            window.Show(_mainWindowProvider.MainWindow);
+            _shell.OpenResult(Path, Result);
         }
         else
         {
-            ToastRequested?.Invoke("该文件夹的子项缓存已失效, 请重新扫描后重试");
+            ToastRequested?.Invoke("该文件夹的子项缓存已失效, 请重新计算后重试");
         }
     }
 
@@ -353,8 +333,8 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
             else
             {
                 Result = folderSize;
-                BytesScanned = folderSize.TotalBytes;
-                FilesScanned = folderSize.FileCount;
+                BytesCalculated = folderSize.TotalBytes;
+                FilesCalculated = folderSize.FileCount;
                 Status = CalculateTaskStatus.Completed;
             }
         }
@@ -375,7 +355,7 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// 重新检查是否可以打开结果窗口
+    /// 重新检查是否可以打开结果视图
     /// </summary>
     private void RecheckCanOpenResult()
     {
@@ -402,9 +382,9 @@ public sealed partial class ScanTaskViewModel : ObservableObject, IDisposable
     {
         Dispatcher.UIThread.Post(() =>
         {
-            BytesScanned = e.ProgressReport.BytesSoFar;
-            FilesScanned = e.ProgressReport.FilesProcessed;
-            FoldersScanned = e.ProgressReport.FoldersProcessed;
+            BytesCalculated = e.ProgressReport.BytesSoFar;
+            FilesCalculated = e.ProgressReport.FilesProcessed;
+            FoldersCalculated = e.ProgressReport.FoldersProcessed;
             SpeedBytesPerSecond = e.SpeedBytesPerSecond;
         }, DispatcherPriority.Background);
     }

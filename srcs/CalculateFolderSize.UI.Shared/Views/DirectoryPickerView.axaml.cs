@@ -7,14 +7,14 @@ using CalculateFolderSize.UI.Shared.ViewModels;
 namespace CalculateFolderSize.UI.Shared.Views;
 
 /// <summary>
-/// 目录选择窗口, 安卓端用于浏览共享存储并选择文件夹
+/// 目录选择视图, 安卓端用于浏览共享存储并选择文件夹
 /// </summary>
-public partial class DirectoryPickerWindow : Window
+public sealed partial class DirectoryPickerView : UserControl
 {
     /// <summary>
-    /// 创建目录选择窗口
+    /// 创建目录选择视图
     /// </summary>
-    public DirectoryPickerWindow()
+    public DirectoryPickerView()
     {
         InitializeComponent();
     }
@@ -33,7 +33,7 @@ public partial class DirectoryPickerWindow : Window
     }
 
     /// <summary>
-    /// 确认选择当前目录并返回其路径
+    /// 确认选择当前目录
     /// </summary>
     /// <param name="sender">按钮</param>
     /// <param name="e">路由事件参数</param>
@@ -41,7 +41,7 @@ public partial class DirectoryPickerWindow : Window
     {
         if (DataContext is DirectoryPickerViewModel viewModel)
         {
-            Close(viewModel.CurrentPath);
+            viewModel.ConfirmSelection();
         }
     }
 
@@ -52,6 +52,9 @@ public partial class DirectoryPickerWindow : Window
     /// <param name="e">路由事件参数</param>
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
-        Close(null);
+        if (DataContext is DirectoryPickerViewModel viewModel)
+        {
+            viewModel.Cancel();
+        }
     }
 }

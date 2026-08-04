@@ -12,4 +12,34 @@
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
   </Application.Styles>
 
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+
+        <!-- 浅色主题 -->
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F2F5FA"/>
+          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#1E5FCC"/>
+          <SolidColorBrush x:Key="SeparatorBrush" Color="#33000000"/>
+          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#2E6FDB"/>
+          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="DangerButtonBackgroundBrush" Color="#FCE8E6"/>
+          <SolidColorBrush x:Key="DangerButtonForegroundBrush" Color="#B3261E"/>
+        </ResourceDictionary>
+
+        <!-- 深色主题 -->
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#1A1D24"/>
+          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#7FB0FF"/>
+          <SolidColorBrush x:Key="SeparatorBrush" Color="#40FFFFFF"/>
+          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#4C8DF6"/>
+          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
+          <SolidColorBrush x:Key="DangerButtonBackgroundBrush" Color="#4A2222"/>
+          <SolidColorBrush x:Key="DangerButtonForegroundBrush" Color="#FF8A80"/>
+        </ResourceDictionary>
+
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
 </Application>

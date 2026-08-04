@@ -53,6 +53,14 @@
 - **存储访问权限服务**: 新增 `IStorageAccessService` 接口与平台实现 (桌面恒已授权, 安卓检查并跳转系统设置页引导 `MANAGE_EXTERNAL_STORAGE` 授权), 主窗口顶部横幅在未授权时提示并提供"去授权"入口, 未授权时跳过文件日志避免启动崩溃
 - **安卓内置目录选择器**: 新增 `DirectoryPickerWindow`, 基于 `IFileSystem` 枚举共享存储物理路径逐层浏览, 替代 SAF 目录树选择器
 - **安卓共享存储目录**: 应用数据与日志目录移至共享存储 (`/storage/emulated/0/CalculateFolderSize`), 用户可直接用文件管理器浏览设置/历史/日志文件
+- **壳导航架构**: 新增 `ShellView` / `ShellWindow` / `ShellViewModel`, 桌面与安卓共用单窗口壳, 以覆盖层承载结果视图栈 (按路径去重, 可同时打开多个) / 设置抽屉 / 目录选择器, 全局 Toast 供所有视图共用
+- **全局 Toast**: `ToastViewModelBase` 升级为全局单例 `ToastViewModel` (按依赖注入共享), `Show(message)` 取代各视图自持 Toast 的模式
+- **顶层视图提供器**: 新增 `ITopLevelProvider` / `TopLevelProvider`, 从应用程序生命周期获取当前顶层视图, 供系统文件夹选择器与剪贴板使用
+- **主题资源上移**: 浅色/深色主题画刷资源由主窗口上移至 `App.Resources`, 壳内所有视图统一使用
+- **Toast 显示时长配置**: `UIOptions` 新增 `ToastDurationSeconds` (默认 3 秒, 范围 0-10 秒), 配置解析时钳制到合法范围
+- **结果可用性提示**: 计算任务新增 `CanOpenResult` / `OpenResultHint`, 子项缓存失效或未开启子项捕获时给出原因提示; 缓存数下降时自动重查可用性
+- **输入按钮动态文本**: 主视图输入按钮未选中条目时显示"添加", 选中后显示"覆盖"; 输入区按钮改用 WrapPanel 自动换行
+- **复制路径命令**: 主视图新增复制路径到剪贴板命令, 剪贴板不可用或失败时 Toast 反馈
 
 ### Changed
 
@@ -92,6 +100,15 @@
 - **Android 最低 API 提升至 30**: `MANAGE_EXTERNAL_STORAGE` 权限自 API 30 起可用, 免除低版本运行时权限兼容逻辑
 - **日志导出简化**: 移除 SAF 文件夹选择器复制, 日志位于共享存储可直接用文件管理器浏览
 - **SystemOpener 简化**: 移除安卓 Launcher/content URI 分支, 安卓端暂不支持打开文件或文件夹
+- **窗口改视图重构**: `MainWindow` / `ResultWindow` / `SettingsWindow` / `DirectoryPickerWindow` 重构为 `UserControl` 视图 (`MainView` / `ResultView` / `SettingsView` / `DirectoryPickerView`), 由壳视图统一承载; 相应 ViewModel 重命名 (`MainWindowViewModel` → `MainViewModel`, `ResultWindowViewModel` → `ResultViewModel`, `SettingsWindowViewModel` → `SettingsViewModel`, `ScanTaskViewModel` → `CalculateTaskViewModel`, `ToastViewModelBase` → `ToastViewModel`), `ViewLocator` 改用 `ViewSuffix` 常量后缀替换
+- **UI 术语统一**: "扫描" 改为 "计算" (任务列标题"已扫文件夹/已扫文件" → "已计算文件夹/已计算文件", 主视图标题改为"文件夹大小计算器", 权限横幅文案同步更新)
+- **Core 日志事件重命名**: `ScanStarted` / `ScanCompleted` / `ScanCanceled` → `CalculateStarted` / `CalculateCompleted` / `CalculateCanceled` (EventId 不变, 消息同步更新), 日志测试同步适配
+- **界面状态刷新合并**: 缓存条目数定时器与存储访问权限轮询合并为单一 UI 刷新计时器 (`UiRefreshIntervalMilliseconds`, 50ms), 仅值变化时更新属性
+- **节流默认值调整**: `UIOptions.ThrottleIntervalMilliseconds` 默认值由 100ms 调整为 200ms, 配置解析改为上下限双向钳制; 新增 `DefaultThrottleIntervalMilliseconds` 常量
+- **UIOptions 参数重排**: 构造参数调整为 (Theme, ThrottleIntervalMilliseconds, ToastDurationSeconds, Level), 设置存储序列化顺序同步更新
+- **设置保存行为**: 桌面端保存按钮改为"保存并退出" (保存后重启使配置生效), 安卓端仅保存
+- **平台入口简化**: 桌面 `Program` / 安卓 `MainApplication` 直接构建 ServiceProvider 并赋值 `App.Services`, 移除局部变量中转
+- **资源清理补充**: `FolderSizeCalculator` 及各 ViewModel 的 `Dispose` 补充 `GC.SuppressFinalize`
 
 ### Removed
 
@@ -103,6 +120,9 @@
 - `InternalsVisibleTo("DynamicProxyGenAssembly2")` — `IFileSystem` 公开后 Moq 可直接模拟 public 接口, 不再需要
 - `AndroidFileSystem` (SAF) 实现 — 被全部文件访问权限 + 统一 `FileSystem` 取代
 - `SettingsWindowViewModel.ExportLogsAsync` — SAF 日志导出逻辑, 日志改共享存储后不再需要
+- `IMainWindowProvider` / `MainWindowProvider` — 被 `ITopLevelProvider` / `TopLevelProvider` 取代
+- `ToolTipHelper.cs` — 输入按钮改动态文本后不再需要
+- 各 `*Window` 视图与 ViewModel (MainWindow / ResultWindow / SettingsWindow / DirectoryPickerWindow 等) — 被 `*View` 与壳导航架构取代
 
 ### Fixed
 

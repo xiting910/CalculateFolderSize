@@ -108,18 +108,18 @@ internal sealed partial class FolderSizeCalculator(
             return null;
         }
 
-        LogScanStarted(folderPath);
+        LogCalculateStarted(folderPath);
         var state = progress is null ? null : new State(progress);
         lock (_activeCalculationsLock) { _activeCalculations++; }
         try
         {
             var result = CalculateSize(folderPath, state, token);
-            LogScanCompleted(folderPath, result.TotalBytes, result.FileCount, result.FolderCount);
+            LogCalculateCompleted(folderPath, result.TotalBytes, result.FileCount, result.FolderCount);
             return result;
         }
         catch (OperationCanceledException)
         {
-            LogScanCanceled(folderPath);
+            LogCalculateCanceled(folderPath);
             throw;
         }
         finally
@@ -135,6 +135,7 @@ internal sealed partial class FolderSizeCalculator(
         {
             _disposed = true;
             Clear();
+            GC.SuppressFinalize(this);
         }
     }
 

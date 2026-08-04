@@ -33,9 +33,11 @@ public static class IServiceCollectionExtensions
                 .AddTransient<ICalculateProgress, CalculateProgress>()
                 .AddSingleton<IHistoriesStore, HistoriesStore>()
                 .AddSingleton<ISettingsStore, SettingsStore>()
-                .AddSingleton<IMainWindowProvider, MainWindowProvider>()
-                .AddSingleton<MainWindowViewModel>()
-                .AddTransient<SettingsWindowViewModel>();
+                .AddSingleton<ITopLevelProvider, TopLevelProvider>()
+                .AddSingleton<MainViewModel>()
+                .AddSingleton<ShellViewModel>()
+                .AddSingleton<ToastViewModel>()
+                .AddTransient<SettingsViewModel>();
         }
     }
 }

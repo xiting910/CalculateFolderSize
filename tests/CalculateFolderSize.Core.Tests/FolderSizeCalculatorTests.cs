@@ -22,6 +22,7 @@ public sealed class FolderSizeCalculatorTests : IDisposable
     public void Dispose()
     {
         _calculator.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     [Fact]

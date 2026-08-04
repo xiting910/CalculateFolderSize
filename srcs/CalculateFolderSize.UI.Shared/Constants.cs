@@ -75,9 +75,19 @@ public static class Constants
     public const string ViewModelSuffix = "ViewModel";
 
     /// <summary>
+    /// View 类型的后缀名常量
+    /// </summary>
+    public const string ViewSuffix = "View";
+
+    /// <summary>
     /// 允许存在的日志文件数
     /// </summary>
     public const int MaxLogFiles = 5;
+
+    /// <summary>
+    /// 默认的节流间隔 (毫秒)
+    /// </summary>
+    public const int DefaultThrottleIntervalMilliseconds = 200;
 
     /// <summary>
     /// 允许的最小节流间隔 (毫秒)
@@ -90,9 +100,24 @@ public static class Constants
     public const int MaxThrottleIntervalMilliseconds = 1000;
 
     /// <summary>
-    /// 缓存数界面的合并刷新间隔 (毫秒)
+    /// 默认的 Toast 提示显示时间 (秒)
     /// </summary>
-    public const int CacheCountRefreshIntervalMilliseconds = 50;
+    public const double DefaultToastDurationSeconds = 3;
+
+    /// <summary>
+    /// Toast 提示的最短显示时间 (秒)
+    /// </summary>
+    public const double MinToastDurationSeconds = 0;
+
+    /// <summary>
+    /// Toast 提示的最长显示时间 (秒)
+    /// </summary>
+    public const double MaxToastDurationSeconds = 10;
+
+    /// <summary>
+    /// 界面状态轮询刷新间隔 (毫秒)
+    /// </summary>
+    public const int UiRefreshIntervalMilliseconds = 50;
 
     /// <summary>
     /// 耗时列的刷新间隔 (毫秒)
@@ -115,7 +140,7 @@ public static class Constants
     public const int MaxDecimalPlaces = 6;
 
     /// <summary>
-    /// 并行度范围
+    /// 允许的最小并行度
     /// </summary>
     public const int MinParallelism = 1;
 

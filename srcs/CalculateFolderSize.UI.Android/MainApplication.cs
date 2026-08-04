@@ -49,11 +49,11 @@ public class MainApplication : AvaloniaAndroidApplication<App>
             .AddUIShared()
             .AddSingleton<IStorageAccessService, StorageAccessService>();
 
-        _ = AndroidEnvironment.IsExternalStorageManager
+        App.Services = (AndroidEnvironment.IsExternalStorageManager
             ? services.AddLogging(b => b.AddFile(Constants.LatestLogFilePath, o => o.MinLevel = level))
-            : services.AddLogging();
+            : services.AddLogging())
+            .BuildServiceProvider();
 
-        App.Services = services.BuildServiceProvider();
         return base.CustomizeAppBuilder(builder).WithInterFont();
     }
 }

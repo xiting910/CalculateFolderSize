@@ -1,42 +1,8 @@
-<Window x:Class="CalculateFolderSize.UI.Shared.Views.MainWindow"
-        xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
-        xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
-        x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/logo.ico"
-        Title="CalculateFolderSize"
-        Width="1000" Height="700"
-        WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource WindowBackgroundBrush}">
-
-  <Window.Resources>
-    <ResourceDictionary>
-      <ResourceDictionary.ThemeDictionaries>
-
-        <!-- 浅色主题 -->
-        <ResourceDictionary x:Key="Light">
-          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F2F5FA"/>
-          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#1E5FCC"/>
-          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#2E6FDB"/>
-          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
-          <SolidColorBrush x:Key="DangerButtonBackgroundBrush" Color="#FCE8E6"/>
-          <SolidColorBrush x:Key="DangerButtonForegroundBrush" Color="#B3261E"/>
-        </ResourceDictionary>
-
-        <!-- 深色主题 -->
-        <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#1A1D24"/>
-          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#7FB0FF"/>
-          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#4C8DF6"/>
-          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
-          <SolidColorBrush x:Key="DangerButtonBackgroundBrush" Color="#4A2222"/>
-          <SolidColorBrush x:Key="DangerButtonForegroundBrush" Color="#FF8A80"/>
-        </ResourceDictionary>
-
-      </ResourceDictionary.ThemeDictionaries>
-    </ResourceDictionary>
-  </Window.Resources>
+<UserControl x:Class="CalculateFolderSize.UI.Shared.Views.MainView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
+             x:DataType="vm:MainViewModel">
 
   <Panel>
 
@@ -46,14 +12,14 @@
       <Border Grid.Row="0" IsVisible="{Binding ShowStorageAccessBanner}"
               Background="#B3261E" Padding="8,4">
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="需要授予全部文件访问权限才能扫描文件夹" Foreground="White" VerticalAlignment="Center"/>
+          <TextBlock Text="需要授予全部文件访问权限才能计算文件夹" Foreground="White" VerticalAlignment="Center"/>
           <Button Content="去授权" Command="{Binding RequestAccessCommand}" Padding="10,2"/>
         </StackPanel>
       </Border>
 
       <!-- 顶部标题栏, 居中显示 -->
       <Grid Grid.Row="1" Margin="8,8,8,0">
-        <TextBlock Text="CalculateFolderSize" FontSize="18" FontWeight="Bold"
+        <TextBlock Text="文件夹大小计算器" FontSize="18" FontWeight="Bold"
                    Foreground="{DynamicResource TitleForegroundBrush}"
                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
       </Grid>
@@ -70,8 +36,7 @@
       <!-- 输入区, 仅保留输入按钮 -->
       <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="8,4">
         <TextBox Text="{Binding InputPath}" PlaceholderText="输入文件夹路径..." VerticalAlignment="Center"/>
-        <Button Grid.Column="1" Content="输入" Command="{Binding AddInputCommand}"
-                ToolTip.Tip="{Binding InputTip}" Holding="OnControlHolding"
+        <Button Grid.Column="1" Content="{Binding InputButtonText}" Command="{Binding AddInputCommand}"
                 Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
       </Grid>
 
@@ -79,31 +44,31 @@
       <Grid Grid.Row="4" ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="8,4">
         <Grid RowDefinitions="Auto,Auto,*">
           <TextBlock Text="待计算文件夹" Margin="0,0,0,4"/>
-          <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="6">
+          <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemSpacing="6">
             <Button Content="开始计算" Command="{Binding StartCalculationsCommand}"
                     IsDefault="True"
                     Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
-            <Button Grid.Column="1" Content="浏览文件夹" Command="{Binding PickFoldersCommand}"
+            <Button Content="浏览文件夹" Command="{Binding PickFoldersCommand}"
                     Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
-            <Button Grid.Column="2" Content="删除选中" Command="{Binding RemoveSelectedInputCommand}"
+            <Button Content="删除选中" Command="{Binding RemoveSelectedInputCommand}"
                     Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
-            <Button Grid.Column="3" Content="清空列表" Command="{Binding ClearInputsCommand}"
+            <Button Content="清空列表" Command="{Binding ClearInputsCommand}"
                     Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
-          </Grid>
+          </WrapPanel>
           <ListBox Grid.Row="2" x:Name="InputPathsListBox"
                    ItemsSource="{Binding InputPaths}" SelectedItem="{Binding SelectedInputPath, Mode=TwoWay}"
                    Margin="0,4,0,0"/>
         </Grid>
         <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*">
           <TextBlock Text="历史记录" Margin="0,0,0,4"/>
-          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
-            <Button Content="加入输入列表" Command="{Binding AddFromHistoryCommand}" HorizontalAlignment="Left"
+          <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemSpacing="6">
+            <Button Content="加入输入列表" Command="{Binding AddFromHistoryCommand}"
                     Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
-            <Button Grid.Column="1" Content="删除选中" Command="{Binding RemoveSelectedHistoriesCommand}"
+            <Button Content="删除选中" Command="{Binding RemoveSelectedHistoriesCommand}"
                     Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
-            <Button Grid.Column="2" Content="清空历史" Command="{Binding ClearHistoryCommand}" HorizontalAlignment="Right"
+            <Button Content="清空历史" Command="{Binding ClearHistoryCommand}"
                     Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
-          </Grid>
+          </WrapPanel>
           <ListBox Grid.Row="2" x:Name="HistoriesListBox" SelectionMode="Multiple"
                    ItemsSource="{Binding Histories}" SelectionChanged="OnHistoriesSelectionChanged" Margin="0,4,0,0"/>
         </Grid>
@@ -130,27 +95,27 @@
                            VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
               </DataGridTemplateColumn.Header>
               <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate x:DataType="vm:ScanTaskViewModel">
+                <DataTemplate x:DataType="vm:CalculateTaskViewModel">
                   <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}"
                              VerticalAlignment="Center"/>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Binding="{Binding FoldersScanned}" Width="Auto">
+            <DataGridTextColumn Binding="{Binding FoldersCalculated}" Width="Auto">
               <DataGridTextColumn.Header>
-                <TextBlock Text="已扫文件夹" Tag="FoldersScanned" Background="Transparent"
+                <TextBlock Text="已计算文件夹" Tag="FoldersCalculated" Background="Transparent"
                            VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
               </DataGridTextColumn.Header>
             </DataGridTextColumn>
-            <DataGridTextColumn Binding="{Binding FilesScanned}" Width="Auto">
+            <DataGridTextColumn Binding="{Binding FilesCalculated}" Width="Auto">
               <DataGridTextColumn.Header>
-                <TextBlock Text="已扫文件" Tag="FilesScanned" Background="Transparent"
+                <TextBlock Text="已计算文件" Tag="FilesCalculated" Background="Transparent"
                            VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
               </DataGridTextColumn.Header>
             </DataGridTextColumn>
             <DataGridTextColumn Binding="{Binding BytesText}" Width="Auto">
               <DataGridTextColumn.Header>
-                <TextBlock Text="大小" Tag="BytesScanned" Background="Transparent"
+                <TextBlock Text="大小" Tag="BytesCalculated" Background="Transparent"
                            VerticalAlignment="Center" PointerPressed="OnSortHeaderPressed"/>
               </DataGridTextColumn.Header>
             </DataGridTextColumn>
@@ -174,7 +139,7 @@
             </DataGridTextColumn>
             <DataGridTemplateColumn Header="操作" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate x:DataType="vm:ScanTaskViewModel">
+                <DataTemplate x:DataType="vm:CalculateTaskViewModel">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <Button Content="{Binding DeleteButtonText}" Command="{Binding DeleteCommand}"
                             Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
@@ -188,9 +153,6 @@
 
     </Grid>
 
-    <!-- 右下角 Toast 通知 -->
-    <views:ToastView/>
-
   </Panel>
 
-</Window>
+</UserControl>

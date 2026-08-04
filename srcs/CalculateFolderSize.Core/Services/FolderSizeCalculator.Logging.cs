@@ -21,16 +21,16 @@ internal sealed partial class FolderSizeCalculator
     private partial void LogDirectoryNotFound(string path);
 
     /// <summary>
-    /// 记录扫描开始
+    /// 记录计算开始
     /// </summary>
     /// <param name="path">文件夹路径</param>
     [LoggerMessage(
         EventId = 2,
-        EventName = "ScanStarted",
+        EventName = "CalculateStarted",
         Level = LogLevel.Information,
-        Message = "扫描开始: {Path}"
+        Message = "计算开始: {Path}"
     )]
-    private partial void LogScanStarted(string path);
+    private partial void LogCalculateStarted(string path);
 
     /// <summary>
     /// 记录缓存命中
@@ -98,7 +98,7 @@ internal sealed partial class FolderSizeCalculator
     private partial void LogChildrenCacheFailed(string path);
 
     /// <summary>
-    /// 记录扫描完成
+    /// 记录计算完成
     /// </summary>
     /// <param name="path">文件夹路径</param>
     /// <param name="totalBytes">总字节数</param>
@@ -106,23 +106,23 @@ internal sealed partial class FolderSizeCalculator
     /// <param name="folderCount">文件夹数量</param>
     [LoggerMessage(
         EventId = 8,
-        EventName = "ScanCompleted",
+        EventName = "CalculateCompleted",
         Level = LogLevel.Information,
-        Message = "扫描完成: {Path}, 总字节数={TotalBytes}, 文件数={FileCount}, 文件夹数={FolderCount}"
+        Message = "计算完成: {Path}, 总字节数={TotalBytes}, 文件数={FileCount}, 文件夹数={FolderCount}"
     )]
-    private partial void LogScanCompleted(string path, long totalBytes, int fileCount, int folderCount);
+    private partial void LogCalculateCompleted(string path, long totalBytes, int fileCount, int folderCount);
 
     /// <summary>
-    /// 记录扫描被取消
+    /// 记录计算被取消
     /// </summary>
     /// <param name="path">文件夹路径</param>
     [LoggerMessage(
         EventId = 9,
-        EventName = "ScanCanceled",
+        EventName = "CalculateCanceled",
         Level = LogLevel.Debug,
-        Message = "扫描被取消: {Path}"
+        Message = "计算被取消: {Path}"
     )]
-    private partial void LogScanCanceled(string path);
+    private partial void LogCalculateCanceled(string path);
 
     /// <summary>
     /// 记录缓存清理被取消

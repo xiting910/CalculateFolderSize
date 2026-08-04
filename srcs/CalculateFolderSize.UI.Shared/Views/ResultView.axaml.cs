@@ -2,16 +2,14 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using CalculateFolderSize.UI.Shared.ViewModels;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace CalculateFolderSize.UI.Shared.Views;
 
 /// <summary>
-/// 主窗口
+/// 结果视图
 /// </summary>
-public partial class MainWindow : Window
+public sealed partial class ResultView : UserControl
 {
     /// <summary>
     /// 已点击过的排序表头的基础文本, 用于切换排序列时清除箭头
@@ -29,52 +27,23 @@ public partial class MainWindow : Window
     private bool _sortAscending = true;
 
     /// <summary>
-    /// 创建主窗口
+    /// 创建结果视图
     /// </summary>
-    public MainWindow()
+    public ResultView()
     {
         InitializeComponent();
-        InputPathsListBox.AddHandler(PointerPressedEvent, OnPathListPointerPressed, RoutingStrategies.Tunnel);
-        HistoriesListBox.AddHandler(PointerPressedEvent, OnPathListPointerPressed, RoutingStrategies.Tunnel);
-        Activated += OnActivated;
     }
 
     /// <summary>
-    /// 窗口激活时重新检查存储访问权限, 覆盖从系统设置页授权返回的场景
+    /// 点击返回按钮时请求关闭当前结果视图
     /// </summary>
-    /// <param name="sender">窗口</param>
-    /// <param name="e">事件参数</param>
-    private void OnActivated(object? sender, EventArgs e)
+    /// <param name="sender">按钮</param>
+    /// <param name="e">路由事件参数</param>
+    private void OnBackClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is MainWindowViewModel viewModel)
+        if (DataContext is ResultViewModel viewModel)
         {
-            viewModel.RefreshStorageAccess();
-        }
-    }
-
-    /// <summary>
-    /// 历史记录多选变化时同步到视图模型
-    /// </summary>
-    /// <param name="sender">ListBox</param>
-    /// <param name="e">选中变化事件参数</param>
-    private void OnHistoriesSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel viewModel)
-        {
-            viewModel.SelectedHistories = HistoriesListBox.SelectedItems?.Cast<string>().ToArray() ?? [];
-        }
-    }
-
-    /// <summary>
-    /// 点击列表行时将路径复制到剪贴板, 事件源可能是行内任意元素
-    /// </summary>
-    /// <param name="sender">ListBox</param>
-    /// <param name="e">指针事件参数</param>
-    private void OnPathListPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.Source is Control { DataContext: string path } && DataContext is MainWindowViewModel viewModel)
-        {
-            viewModel.CopyPathCommand.Execute(path);
+            viewModel.RequestClose();
         }
     }
 
@@ -85,11 +54,14 @@ public partial class MainWindow : Window
     /// <param name="e">长按事件参数</param>
     private void OnControlHolding(object? sender, HoldingRoutedEventArgs e)
     {
-        ToolTipHelper.ToggleByHolding(sender, e);
+        if (sender is Control control)
+        {
+            ToolTip.SetIsOpen(control, e.HoldingState == HoldingState.Started);
+        }
     }
 
     /// <summary>
-    /// 双击任务行时查看结果, 无法查看时显示短暂提示
+    /// 双击行时按类型处理: 文件夹下钻进入, 文件以系统默认方式打开
     /// </summary>
     /// <param name="sender">DataGrid</param>
     /// <param name="e">单元格指针按下事件参数</param>
@@ -99,15 +71,15 @@ public partial class MainWindow : Window
         {
             return;
         }
-        if (e.Row.DataContext is ScanTaskViewModel task && DataContext is MainWindowViewModel viewModel)
+        if (e.Row.DataContext is ResultItemViewModel item && DataContext is ResultViewModel viewModel)
         {
-            if (task.CanOpenResult)
+            if (item.IsDirectory)
             {
-                task.OpenResult();
+                viewModel.NavigateDown(item);
             }
             else
             {
-                viewModel.ShowFeedback(task.OpenResultHint);
+                viewModel.OpenFile(item);
             }
         }
     }
@@ -119,7 +91,7 @@ public partial class MainWindow : Window
     /// <param name="e">指针事件参数</param>
     private void OnSortHeaderPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not TextBlock { Tag: string key } header || DataContext is not MainWindowViewModel viewModel)
+        if (sender is not TextBlock { Tag: string key } header || DataContext is not ResultViewModel viewModel)
         {
             return;
         }

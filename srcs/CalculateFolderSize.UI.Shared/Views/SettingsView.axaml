@@ -1,46 +1,28 @@
-<Window x:Class="CalculateFolderSize.UI.Shared.Views.SettingsWindow"
-        xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
-        xmlns:models="using:CalculateFolderSize.UI.Shared.Models"
-        xmlns:shared="using:CalculateFolderSize.UI.Shared"
-        xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
-        x:DataType="vm:SettingsWindowViewModel"
-        Icon="/Assets/logo.ico"
-        Title="设置"
-        Width="480" Height="620"
-        WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource WindowBackgroundBrush}">
+<UserControl x:Class="CalculateFolderSize.UI.Shared.Views.SettingsView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
+             xmlns:models="using:CalculateFolderSize.UI.Shared.Models"
+             xmlns:shared="using:CalculateFolderSize.UI.Shared"
+             x:DataType="vm:SettingsViewModel"
+             Background="{DynamicResource WindowBackgroundBrush}">
 
-  <Window.Resources>
+  <UserControl.Resources>
     <shared:EnumDescriptionConverter x:Key="EnumDescriptionConverter"/>
-    <ResourceDictionary x:Key="ThemeColors">
-      <ResourceDictionary.ThemeDictionaries>
-
-        <!-- 浅色主题 -->
-        <ResourceDictionary x:Key="Light">
-          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F2F5FA"/>
-          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#1E5FCC"/>
-          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#2E6FDB"/>
-          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
-        </ResourceDictionary>
-
-        <!-- 深色主题 -->
-        <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#1A1D24"/>
-          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#7FB0FF"/>
-          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#4C8DF6"/>
-          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
-        </ResourceDictionary>
-
-      </ResourceDictionary.ThemeDictionaries>
-    </ResourceDictionary>
-  </Window.Resources>
+  </UserControl.Resources>
 
   <Panel>
 
     <ScrollViewer>
       <StackPanel Margin="16" Spacing="16">
+
+        <!-- 标题与关闭按钮 -->
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="设置" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"
+                     Foreground="{DynamicResource TitleForegroundBrush}"/>
+          <Button Grid.Column="1" Content="✕" Click="OnCloseClick" Padding="10,4"
+                  Background="{DynamicResource DangerButtonBackgroundBrush}" Foreground="{DynamicResource DangerButtonForegroundBrush}"/>
+        </Grid>
 
         <!-- 主题 -->
         <TextBlock Text="主题 (即时生效)" FontWeight="Bold"
@@ -66,10 +48,10 @@
                          ToolTip.Tip="文件大小显示保留的小数位数 (0-6). 例如 2 位时显示 1.23 GB, 0 位时显示 1 GB, 保存后重启生效"/>
           <TextBlock Grid.Row="1" Text="每任务最大并行度:" VerticalAlignment="Center"/>
           <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding MaxDegreeOfParallelism}" Minimum="1" Maximum="128" Increment="1" FormatString="0"
-                         ToolTip.Tip="每个计算任务同时扫描文件的最大线程数. 提高数值可加快扫描速度, 但会占用更多 CPU 与内存, 保存后重启生效"/>
+                         ToolTip.Tip="每个计算任务同时计算文件的最大线程数. 提高数值可加快计算速度, 但会占用更多 CPU 与内存, 保存后重启生效"/>
           <TextBlock Grid.Row="2" Text="捕获子项:" VerticalAlignment="Center"/>
-          <CheckBox Grid.Row="2" Grid.Column="1" Content="启用 (用于结果窗口浏览)" IsChecked="{Binding CaptureChildren}"
-                    ToolTip.Tip="扫描时保存每个子文件夹的大小明细, 用于在结果窗口中逐层浏览. 会额外占用内存与磁盘空间, 保存后重启生效"/>
+          <CheckBox Grid.Row="2" Grid.Column="1" Content="启用 (用于结果视图浏览)" IsChecked="{Binding CaptureChildren}"
+                    ToolTip.Tip="计算时保存每个子文件夹的大小明细, 用于在结果视图中逐层浏览. 会额外占用内存与磁盘空间, 保存后重启生效"/>
         </Grid>
         <Button Content="{Binding SaveButtonText}" Command="{Binding SaveCoreOptionsCommand}" HorizontalAlignment="Left"
                 Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
@@ -79,12 +61,15 @@
         <!-- UI 配置 -->
         <TextBlock Text="UI 配置 (保存后重启生效)" FontWeight="Bold"
                    Foreground="{DynamicResource TitleForegroundBrush}"/>
-        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
           <TextBlock Text="进度节流间隔 (毫秒):" VerticalAlignment="Center"/>
           <NumericUpDown Grid.Column="1" Value="{Binding ThrottleIntervalMilliseconds}" Minimum="100" Increment="50" FormatString="0"
                          ToolTip.Tip="进度信息更新到界面的最小间隔 (毫秒). 数值越大界面刷新越少、性能越好, 数值越小进度显示越精确但开销越大, 保存后重启生效"/>
-          <TextBlock Grid.Row="1" Text="日志级别:" VerticalAlignment="Center"/>
-          <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}"
+          <TextBlock Grid.Row="1" Text="Toast 显示时间 (秒):" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding ToastDurationSeconds}" Minimum="0" Maximum="10" Increment="0.5" FormatString="0.0"
+                         ToolTip.Tip="右下角短暂提示的显示时间 (秒), 保存后重启生效"/>
+          <TextBlock Grid.Row="2" Text="日志级别:" VerticalAlignment="Center"/>
+          <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}"
                     ToolTip.Tip="写入日志文件的最低级别, 选择 None 表示不写日志文件, 保存后重启生效"/>
         </Grid>
         <Button Content="{Binding SaveButtonText}" Command="{Binding SaveUIOptionsCommand}" HorizontalAlignment="Left"
@@ -122,9 +107,6 @@
       </StackPanel>
     </ScrollViewer>
 
-    <!-- 右下角 Toast 通知 -->
-    <views:ToastView/>
-
   </Panel>
 
-</Window>
+</UserControl>

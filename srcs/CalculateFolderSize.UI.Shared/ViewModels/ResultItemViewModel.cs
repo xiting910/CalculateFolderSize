@@ -5,7 +5,7 @@ using System.Linq;
 namespace CalculateFolderSize.UI.Shared.ViewModels;
 
 /// <summary>
-/// 结果窗口中单个子项的视图模型
+/// 结果视图中单个子项的视图模型
 /// </summary>
 public sealed class ResultItemViewModel
 {

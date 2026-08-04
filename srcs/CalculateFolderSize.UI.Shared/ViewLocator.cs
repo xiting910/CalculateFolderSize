@@ -14,15 +14,12 @@ public sealed class ViewLocator : IDataTemplate
     {
         if (data is null) { return null; }
 
-        var viewTypeName = data.GetType().FullName;
+        var viewTypeName = data.GetType().FullName?
+            .Replace(nameof(ViewModels), nameof(Views), StringComparison.Ordinal)
+            .Replace(Constants.ViewModelSuffix, Constants.ViewSuffix, StringComparison.Ordinal);
+
         if (viewTypeName is not null)
         {
-            viewTypeName = viewTypeName.Replace(nameof(ViewModels), nameof(Views), StringComparison.Ordinal);
-            if (viewTypeName.EndsWith(Constants.ViewModelSuffix, StringComparison.Ordinal))
-            {
-                viewTypeName = viewTypeName[..^Constants.ViewModelSuffix.Length];
-            }
-
             var viewType = Type.GetType(viewTypeName);
             if (viewType is not null && typeof(Control).IsAssignableFrom(viewType))
             {

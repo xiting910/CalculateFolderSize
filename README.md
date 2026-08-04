@@ -34,8 +34,8 @@
 - **跨平台支持**: 统一文件系统实现, 跨 Windows、macOS、Linux 和 Android 平台工作
 - **多平台 UI**:
   - **CLI**: 基于 Spectre.Console 的交互式命令行工具, 支持多路径并发计算, 彩色输出和对齐显示
-  - **桌面 (Desktop)**: 基于 Avalonia UI 的桌面应用, 支持多任务并行扫描 (实时进度/速度/耗时, 任务列可排序), 结果窗口逐层下钻浏览, 历史记录与设置持久化, 文件日志自动轮转
-  - **Android**: 基于 Avalonia UI 的 Android 应用, 完整入口 (服务容器注入/文件日志/启动画面), 全部文件访问权限引导与内置目录选择器, 发布产物为正式签名 APK
+  - **桌面 (Desktop)**: 基于 Avalonia UI 的桌面应用, 单窗口壳架构 (主视图/结果视图栈/设置抽屉/目录选择器覆盖层), 支持多任务并行计算 (实时进度/速度/耗时, 任务列可排序), 结果视图逐层下钻浏览, 历史记录与设置持久化, 文件日志自动轮转
+  - **Android**: 基于 Avalonia UI 的 Android 应用, 完整入口 (服务容器注入/文件日志/启动画面), 全部文件访问权限引导与内置目录选择器, 与桌面端共用壳视图架构, 发布产物为正式签名 APK
 - **可读的文件大小**: 自动将字节数转换为 B / KB / MB / GB / TB / PB / EB 等单位
 - **错误容忍**: 遇到无权访问的目录或文件时继续扫描, 计算完成后汇总显示错误信息
 
@@ -77,13 +77,13 @@ CalculateFolderSize/
 │   │   └── Program.cs                      # 程序入口点
 │   ├── CalculateFolderSize.UI.Shared/      # UI 共享代码 (基于 Avalonia UI 的 MVVM 应用)
 │   │   ├── Assets/                         # 应用图标 (logo.ico 窗口/exe, Icon.png Android)
-│   │   ├── App.axaml(.cs)                  # 应用程序类, 创建主窗口并应用已保存的主题
+│   │   ├── App.axaml(.cs)                  # 应用程序类, 创建壳窗口/壳视图并应用已保存的主题
 │   │   ├── Constants.cs                    # 常量 (数据/日志目录, 限制范围, 刷新间隔)
 │   │   ├── EnumDescriptionConverter.cs     # 枚举描述文本转换器
 │   │   ├── EnumExtensions.cs               # 枚举扩展 (获取中文描述)
-│   │   ├── IMainWindowProvider.cs          # 主窗口提供器接口
+│   │   ├── ITopLevelProvider.cs            # 顶层视图提供器接口
 │   │   ├── IServiceCollectionExtensions.cs # UI 共享层 DI 注册扩展 (AddUIShared)
-│   │   ├── MainWindowProvider.cs           # 主窗口提供器实现
+│   │   ├── TopLevelProvider.cs             # 顶层视图提供器实现
 │   │   ├── SystemOpener.cs                 # 跨平台系统默认方式打开文件/文件夹
 │   │   ├── ViewLocator.cs                  # ViewModel 到 View 的视图定位器
 │   │   ├── Interfaces/                     # 服务接口
@@ -101,21 +101,23 @@ CalculateFolderSize/
 │   │   │   ├── HistoriesStore.cs           # 历史记录存储 (AppData/histories.txt)
 │   │   │   └── SettingsStore.cs            # 设置存储 (AppData/settings.json)
 │   │   ├── ViewModels/                     # 视图模型 (CommunityToolkit.Mvvm)
-│   │   │   ├── BreadcrumbItemViewModel.cs  # 结果窗口面包屑条目
+│   │   │   ├── BreadcrumbItemViewModel.cs  # 结果视图面包屑条目
+│   │   │   ├── CalculateTaskViewModel.cs   # 单个计算任务 (执行/进度/状态/取消)
 │   │   │   ├── DirectoryPickerViewModel.cs # 目录选择器 (安卓端浏览共享存储)
-│   │   │   ├── MainWindowViewModel.cs      # 主窗口 (输入列表/历史/任务列表/缓存/权限横幅)
-│   │   │   ├── ResultItemViewModel.cs      # 结果窗口子项
-│   │   │   ├── ResultWindowViewModel.cs    # 结果窗口 (下钻浏览/面包屑导航/排序)
-│   │   │   ├── ScanTaskViewModel.cs        # 单个计算任务 (执行/进度/状态/取消)
-│   │   │   ├── SettingsWindowViewModel.cs  # 设置窗口 (配置/主题/日志/关于)
-│   │   │   └── ToastViewModelBase.cs       # Toast 短暂提示基类
+│   │   │   ├── MainViewModel.cs            # 主视图 (输入列表/历史/任务列表/缓存/权限横幅)
+│   │   │   ├── ResultItemViewModel.cs      # 结果视图子项
+│   │   │   ├── ResultViewModel.cs          # 结果视图 (下钻浏览/面包屑导航/排序)
+│   │   │   ├── SettingsViewModel.cs        # 设置视图 (配置/主题/日志/关于)
+│   │   │   ├── ShellViewModel.cs           # 壳视图模型 (主视图/结果栈/设置抽屉/目录选择器)
+│   │   │   └── ToastViewModel.cs           # 全局 Toast 短暂提示
 │   │   └── Views/                          # 视图 (Avalonia XAML)
-│   │       ├── DirectoryPickerWindow.axaml(.cs) # 目录选择窗口 (安卓端)
-│   │       ├── MainWindow.axaml(.cs)       # 主窗口
-│   │       ├── ResultWindow.axaml(.cs)     # 结果窗口
-│   │       ├── SettingsWindow.axaml(.cs)   # 设置窗口
-│   │       ├── ToastView.axaml(.cs)        # 右下角 Toast 提示
-│   │       └── ToolTipHelper.cs            # ToolTip 辅助
+│   │       ├── DirectoryPickerView.axaml(.cs) # 目录选择视图 (安卓端)
+│   │       ├── MainView.axaml(.cs)        # 主视图
+│   │       ├── ResultView.axaml(.cs)      # 结果视图
+│   │       ├── SettingsView.axaml(.cs)    # 设置视图
+│   │       ├── ShellView.axaml(.cs)       # 壳视图 (主视图与各覆盖层容器)
+│   │       ├── ShellWindow.axaml(.cs)     # 桌面端壳窗口
+│   │       └── ToastView.axaml(.cs)       # 右下角全局 Toast 提示
 │   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (服务容器与配置加载, 文件日志与轮转, Windows 兼容清单)
 │   │   ├── DesktopStorageAccessService.cs  # 桌面存储访问服务 (恒已授权)
 │   │   ├── Program.cs                      # 程序入口点 (配置加载/服务容器/文件日志与轮转)
@@ -215,13 +217,14 @@ CLI 工具支持通过 `appsettings.json` 配置:
 
 ### 桌面应用配置
 
-桌面应用从 `%APPDATA%/CalculateFolderSize/settings.json` 读取配置, 可在应用内"设置"窗口中修改. `Core` 配置项含义与 CLI 相同, `UI` 配置项如下:
+桌面应用从 `%APPDATA%/CalculateFolderSize/settings.json` 读取配置, 可在应用内"设置"抽屉中修改. `Core` 配置项含义与 CLI 相同, `UI` 配置项如下:
 
 | 配置项                          | 说明                             | 默认值         |
 | ------------------------------- | -------------------------------- | -------------- |
 | `UI.Level`                      | 日志级别 (None 表示不写日志文件)   | `Information`  |
 | `UI.Theme`                      | 主题模式 (System / Light / Dark) | `System`       |
-| `UI.ThrottleIntervalMilliseconds` | 进度节流间隔 (毫秒)              | `100`          |
+| `UI.ThrottleIntervalMilliseconds` | 进度节流间隔 (毫秒)              | `200`          |
+| `UI.ToastDurationSeconds`       | Toast 提示显示时间 (秒)           | `3`            |
 
 日志文件写入 `%APPDATA%/CalculateFolderSize/logs/`, 每次启动时轮转, 仅保留最近 5 个日志文件.
 

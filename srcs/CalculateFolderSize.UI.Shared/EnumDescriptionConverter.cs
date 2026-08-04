@@ -14,10 +14,7 @@ public sealed class EnumDescriptionConverter : IValueConverter
     /// <inheritdoc/>
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is not Enum enumValue)
-        {
-            return value;
-        }
+        if (value is not Enum enumValue) { return value; }
 
         var name = enumValue.ToString();
         var field = enumValue.GetType().GetField(name);

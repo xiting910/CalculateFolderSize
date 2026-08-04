@@ -241,7 +241,7 @@ public sealed class AppTests
         private static ConsoleKeyInfo ToKey(char ch)
         {
             var key = ch == '\r' ? ConsoleKey.Enter : (ConsoleKey)char.ToUpperInvariant(ch);
-            return new ConsoleKeyInfo(ch, key, false, false, false);
+            return new(ch, key, false, false, false);
         }
     }
 

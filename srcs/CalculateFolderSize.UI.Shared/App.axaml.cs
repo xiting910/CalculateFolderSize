@@ -15,23 +15,6 @@ namespace CalculateFolderSize.UI.Shared;
 /// </summary>
 public sealed partial class App : Application
 {
-    /// <inheritdoc/>
-    public override void OnFrameworkInitializationCompleted()
-    {
-        base.OnFrameworkInitializationCompleted();
-
-        try { _ = Directory.CreateDirectory(Constants.AppDataDirectory); } catch { }
-
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            desktop.MainWindow = CreateMainWindow();
-        }
-        else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
-        {
-            singleView.MainView = CreateMainWindow();
-        }
-    }
-
     /// <summary>
     /// 服务容器, 由平台入口在启动时注入
     /// </summary>
@@ -42,12 +25,13 @@ public sealed partial class App : Application
         set;
     }
 
-    /// <summary>
-    /// 创建主窗口并应用已保存的主题
-    /// </summary>
-    /// <returns>主窗口</returns>
-    private static MainWindow CreateMainWindow()
+    /// <inheritdoc/>
+    public override void OnFrameworkInitializationCompleted()
     {
+        base.OnFrameworkInitializationCompleted();
+
+        try { _ = Directory.CreateDirectory(Constants.AppDataDirectory); } catch { }
+
         var uiOptions = Services.GetRequiredService<UIOptions>();
         Current?.RequestedThemeVariant = uiOptions.Theme switch
         {
@@ -56,7 +40,19 @@ public sealed partial class App : Application
             _ => ThemeVariant.Default
         };
 
-        var window = new MainWindow { DataContext = Services.GetRequiredService<MainWindowViewModel>() };
-        return window;
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.MainWindow = new ShellWindow
+            {
+                DataContext = Services.GetRequiredService<ShellViewModel>()
+            };
+        }
+        else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        {
+            singleView.MainView = new ShellView
+            {
+                DataContext = Services.GetRequiredService<ShellViewModel>()
+            };
+        }
     }
 }

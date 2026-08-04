@@ -1,14 +1,11 @@
-<Window x:Class="CalculateFolderSize.UI.Shared.Views.DirectoryPickerWindow"
-        xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
-        xmlns:core="using:CalculateFolderSize.Core.Models"
-        xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
-        x:DataType="vm:DirectoryPickerViewModel"
-        Icon="/Assets/logo.ico"
-        Title="选择文件夹"
-        Width="420" Height="520"
-        WindowStartupLocation="CenterOwner">
+<UserControl x:Class="CalculateFolderSize.UI.Shared.Views.DirectoryPickerView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
+             xmlns:core="using:CalculateFolderSize.Core.Models"
+             x:DataType="vm:DirectoryPickerViewModel"
+             Width="420" Height="520"
+             Background="{DynamicResource WindowBackgroundBrush}">
 
   <Panel>
     <Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -33,10 +30,7 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <!-- 右下角 Toast 通知 -->
-      <views:ToastView Grid.Row="3"/>
-
     </Grid>
   </Panel>
 
-</Window>
+</UserControl>

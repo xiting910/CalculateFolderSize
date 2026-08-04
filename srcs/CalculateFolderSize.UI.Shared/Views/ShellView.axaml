@@ -1,0 +1,35 @@
+<UserControl x:Class="CalculateFolderSize.UI.Shared.Views.ShellView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
+             xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
+             x:DataType="vm:ShellViewModel">
+
+  <Panel>
+
+    <!-- 主视图 -->
+    <views:MainView DataContext="{Binding Main}"/>
+
+    <!-- 目录选择覆盖层 -->
+    <Border IsVisible="{Binding IsDirectoryPickerOpen}" Background="#B3000000">
+      <ContentControl Content="{Binding DirectoryPicker}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+
+    <!-- 结果覆盖层, 栈顶可见 -->
+    <ContentControl Content="{Binding CurrentResult}" IsVisible="{Binding HasResult}"/>
+
+    <!-- 设置抽屉: 右侧遮罩 -->
+    <Border IsVisible="{Binding IsSettingsOpen}" Background="#66000000" PointerPressed="OnSettingsMaskPressed"/>
+
+    <!-- 设置抽屉: 左侧面板 -->
+    <Border IsVisible="{Binding IsSettingsOpen}" Background="{DynamicResource WindowBackgroundBrush}"
+            HorizontalAlignment="Left" Width="400">
+      <ContentControl Content="{Binding Settings}"/>
+    </Border>
+
+    <!-- 全局 Toast 通知 -->
+    <views:ToastView DataContext="{Binding Toast}"/>
+
+  </Panel>
+
+</UserControl>

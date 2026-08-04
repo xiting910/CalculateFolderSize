@@ -16,7 +16,7 @@ namespace CalculateFolderSize.UI.Shared.Services;
 /// 构造函数
 /// </remarks>
 /// <param name="_logger">日志记录器</param>
-/// <param name="_coreOptions">核心选项</param>
+/// <param name="_coreOptions">Core 选项</param>
 internal sealed partial class HistoriesStore(ILogger<HistoriesStore> _logger, CoreOptions _coreOptions) : IHistoriesStore
 {
     /// <summary>

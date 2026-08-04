@@ -17,14 +17,19 @@ using System.Threading.Tasks;
 namespace CalculateFolderSize.UI.Shared.ViewModels;
 
 /// <summary>
-/// 设置窗口视图模型, 负责 Core/UI 配置编辑、主题切换与关于信息
+/// 设置视图模型, 负责 Core/UI 配置编辑、主题切换与关于信息
 /// </summary>
-public sealed partial class SettingsWindowViewModel : ToastViewModelBase
+public sealed partial class SettingsViewModel : ObservableObject
 {
     /// <summary>
     /// 设置存储
     /// </summary>
     private readonly ISettingsStore _settingsStore;
+
+    /// <summary>
+    /// 全局短暂提示视图模型
+    /// </summary>
+    private readonly ToastViewModel _toast;
 
     /// <summary>
     /// 小数位数
@@ -45,10 +50,22 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
     public partial bool CaptureChildren { get; set; }
 
     /// <summary>
+    /// 当前主题模式
+    /// </summary>
+    [ObservableProperty]
+    public partial ThemeMode Theme { get; set; }
+
+    /// <summary>
     /// 进度节流间隔毫秒数
     /// </summary>
     [ObservableProperty]
     public partial decimal? ThrottleIntervalMilliseconds { get; set; }
+
+    /// <summary>
+    /// Toast 提示显示时间秒数
+    /// </summary>
+    [ObservableProperty]
+    public partial decimal? ToastDurationSeconds { get; set; }
 
     /// <summary>
     /// 日志级别
@@ -57,20 +74,14 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
     public partial LogLevel Level { get; set; }
 
     /// <summary>
-    /// 可选择的日志级别列表
-    /// </summary>
-    public IReadOnlyList<LogLevel> Levels { get; } = Enum.GetValues<LogLevel>();
-
-    /// <summary>
-    /// 当前主题模式
-    /// </summary>
-    [ObservableProperty]
-    public partial ThemeMode Theme { get; set; }
-
-    /// <summary>
     /// 可选择的主题模式列表
     /// </summary>
     public IReadOnlyList<ThemeMode> Themes { get; } = Enum.GetValues<ThemeMode>();
+
+    /// <summary>
+    /// 可选择的日志级别列表
+    /// </summary>
+    public IReadOnlyList<LogLevel> Levels { get; } = Enum.GetValues<LogLevel>();
 
     /// <summary>
     /// 产品名
@@ -115,21 +126,28 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
     public string LogsFolderTip { get; } = Constants.LogsDirectory;
 
     /// <summary>
-    /// 创建设置窗口视图模型
+    /// 创建设置视图模型
     /// </summary>
-    public SettingsWindowViewModel(
+    /// <param name="coreOptions">Core 配置</param>
+    /// <param name="uiOptions">UI 配置</param>
+    /// <param name="settingsStore">设置存储</param>
+    /// <param name="toastViewModel">全局短暂提示视图模型</param>
+    public SettingsViewModel(
         CoreOptions coreOptions,
         UIOptions uiOptions,
-        ISettingsStore settingsStore)
+        ISettingsStore settingsStore,
+        ToastViewModel toastViewModel)
     {
         _settingsStore = settingsStore;
+        _toast = toastViewModel;
 
         DecimalPlaces = coreOptions.DecimalPlaces;
         MaxDegreeOfParallelism = coreOptions.MaxDegreeOfParallelism;
         CaptureChildren = coreOptions.CaptureChildren;
-        ThrottleIntervalMilliseconds = uiOptions.ThrottleIntervalMilliseconds;
-        Level = uiOptions.Level;
         Theme = uiOptions.Theme;
+        ThrottleIntervalMilliseconds = uiOptions.ThrottleIntervalMilliseconds;
+        ToastDurationSeconds = (decimal?)uiOptions.ToastDurationSeconds;
+        Level = uiOptions.Level;
 
         var metadata = typeof(App).Assembly
             .GetCustomAttributes<AssemblyMetadataAttribute>()
@@ -193,12 +211,63 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
             throttle = Constants.MaxThrottleIntervalMilliseconds;
         }
 
+        var toastDuration = (double)(ToastDurationSeconds ?? 3);
+        if (toastDuration < Constants.MinToastDurationSeconds)
+        {
+            toastDuration = Constants.MinToastDurationSeconds;
+        }
+        else if (toastDuration > Constants.MaxToastDurationSeconds)
+        {
+            toastDuration = Constants.MaxToastDurationSeconds;
+        }
+
         await _settingsStore.UpdateUIOptionsAsync(o => o with
         {
-            Level = Level,
-            ThrottleIntervalMilliseconds = throttle
+            ThrottleIntervalMilliseconds = throttle,
+            ToastDurationSeconds = toastDuration,
+            Level = Level
         });
         ExitApplication();
+    }
+
+    /// <summary>
+    /// 打开日志文件夹, 桌面端直接打开目录, 安卓端提示日志路径 (日志位于共享存储, 可直接用文件管理器浏览)
+    /// </summary>
+    [RelayCommand]
+    private void OpenLogsFolder()
+    {
+        try
+        {
+            _ = Directory.CreateDirectory(Constants.LogsDirectory);
+
+            if (OperatingSystem.IsAndroid())
+            {
+                _toast.Show($"日志目录: {Constants.LogsDirectory}");
+                return;
+            }
+
+            if (!SystemOpener.TryOpen(Constants.LogsDirectory, out var errorMessage))
+            {
+                _toast.Show(errorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toast.Show($"无法打开日志目录: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 请求关闭设置抽屉的事件, 由壳视图模型处理
+    /// </summary>
+    public event Action? CloseRequested;
+
+    /// <summary>
+    /// 请求关闭设置抽屉
+    /// </summary>
+    public void RequestClose()
+    {
+        CloseRequested?.Invoke();
     }
 
     /// <summary>
@@ -215,33 +284,6 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
             _ => throw new ArgumentOutOfRangeException(nameof(theme), "未知的主题模式")
         };
         await _settingsStore.UpdateUIOptionsAsync(o => o with { Theme = theme });
-    }
-
-    /// <summary>
-    /// 打开日志文件夹, 桌面端直接打开目录, 安卓端提示日志路径 (日志位于共享存储, 可直接用文件管理器浏览)
-    /// </summary>
-    [RelayCommand]
-    private void OpenLogsFolder()
-    {
-        try
-        {
-            _ = Directory.CreateDirectory(Constants.LogsDirectory);
-
-            if (OperatingSystem.IsAndroid())
-            {
-                ShowFeedback($"日志目录: {Constants.LogsDirectory}");
-                return;
-            }
-
-            if (!SystemOpener.TryOpen(Constants.LogsDirectory, out var errorMessage))
-            {
-                ShowFeedback(errorMessage);
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowFeedback($"无法打开日志目录: {ex.Message}");
-        }
     }
 
     /// <summary>

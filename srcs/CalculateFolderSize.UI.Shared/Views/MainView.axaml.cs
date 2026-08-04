@@ -1,14 +1,16 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using CalculateFolderSize.UI.Shared.ViewModels;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CalculateFolderSize.UI.Shared.Views;
 
 /// <summary>
-/// 结果窗口
+/// 主视图
 /// </summary>
-public partial class ResultWindow : Window
+public sealed partial class MainView : UserControl
 {
     /// <summary>
     /// 已点击过的排序表头的基础文本, 用于切换排序列时清除箭头
@@ -26,25 +28,43 @@ public partial class ResultWindow : Window
     private bool _sortAscending = true;
 
     /// <summary>
-    /// 创建结果窗口
+    /// 创建主视图
     /// </summary>
-    public ResultWindow()
+    public MainView()
     {
         InitializeComponent();
+        InputPathsListBox.AddHandler(PointerPressedEvent, OnPathListPointerPressed, RoutingStrategies.Tunnel);
+        HistoriesListBox.AddHandler(PointerPressedEvent, OnPathListPointerPressed, RoutingStrategies.Tunnel);
     }
 
     /// <summary>
-    /// 触摸长按控件时打开其悬浮提示, 抬手或取消时关闭, 桌面端仍由鼠标悬浮触发
+    /// 历史记录多选变化时同步到视图模型
     /// </summary>
-    /// <param name="sender">提示控件</param>
-    /// <param name="e">长按事件参数</param>
-    private void OnControlHolding(object? sender, HoldingRoutedEventArgs e)
+    /// <param name="sender">ListBox</param>
+    /// <param name="e">选中变化事件参数</param>
+    private void OnHistoriesSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        ToolTipHelper.ToggleByHolding(sender, e);
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.SelectedHistories = HistoriesListBox.SelectedItems?.Cast<string>().ToArray() ?? [];
+        }
     }
 
     /// <summary>
-    /// 双击行时按类型处理: 文件夹下钻进入, 文件以系统默认方式打开
+    /// 点击列表行时将路径复制到剪贴板, 事件源可能是行内任意元素
+    /// </summary>
+    /// <param name="sender">ListBox</param>
+    /// <param name="e">指针事件参数</param>
+    private void OnPathListPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Source is Control { DataContext: string path } && DataContext is MainViewModel viewModel)
+        {
+            viewModel.CopyPathCommand.Execute(path);
+        }
+    }
+
+    /// <summary>
+    /// 双击任务行时查看结果, 无法查看时显示短暂提示
     /// </summary>
     /// <param name="sender">DataGrid</param>
     /// <param name="e">单元格指针按下事件参数</param>
@@ -54,15 +74,15 @@ public partial class ResultWindow : Window
         {
             return;
         }
-        if (e.Row.DataContext is ResultItemViewModel item && DataContext is ResultWindowViewModel viewModel)
+        if (e.Row.DataContext is CalculateTaskViewModel task && DataContext is MainViewModel viewModel)
         {
-            if (item.IsDirectory)
+            if (task.CanOpenResult)
             {
-                viewModel.NavigateDown(item);
+                task.OpenResult();
             }
             else
             {
-                viewModel.OpenFile(item);
+                viewModel.ShowToast(task.OpenResultHint);
             }
         }
     }
@@ -74,7 +94,7 @@ public partial class ResultWindow : Window
     /// <param name="e">指针事件参数</param>
     private void OnSortHeaderPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not TextBlock { Tag: string key } header || DataContext is not ResultWindowViewModel viewModel)
+        if (sender is not TextBlock { Tag: string key } header || DataContext is not MainViewModel viewModel)
         {
             return;
         }

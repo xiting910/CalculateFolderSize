@@ -3,7 +3,6 @@ using Avalonia.Threading;
 using CalculateFolderSize.Core.Interfaces;
 using CalculateFolderSize.Core.Models;
 using CalculateFolderSize.UI.Shared.Interfaces;
-using CalculateFolderSize.UI.Shared.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,10 +15,63 @@ using System.Threading.Tasks;
 namespace CalculateFolderSize.UI.Shared.ViewModels;
 
 /// <summary>
-/// 主窗口视图模型, 负责输入列表、历史记录、任务列表与缓存管理
+/// 主视图模型, 负责输入列表、历史记录、任务列表与缓存管理
 /// </summary>
-public sealed partial class MainWindowViewModel : ToastViewModelBase
+public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
+    /// <summary>
+    /// 状态列比较器, 已完成恒排在未完成之前, 相同则按状态排序
+    /// </summary>
+    private static readonly IComparer<CalculateTaskViewModel> StatusTextComparer =
+        Comparer<CalculateTaskViewModel>.Create((a, b) =>
+        {
+            var completed = a.IsCompleted.CompareTo(b.IsCompleted);
+            return completed != 0 ? completed : a.Status.CompareTo(b.Status);
+        });
+
+    /// <summary>
+    /// 开始时间列比较器, 严格按开始时间排序
+    /// </summary>
+    private static readonly IComparer<CalculateTaskViewModel> StartTimeComparer =
+        Comparer<CalculateTaskViewModel>.Create((a, b) => a.StartTime.CompareTo(b.StartTime));
+
+    /// <summary>
+    /// 耗时列比较器, 严格按耗时排序
+    /// </summary>
+    private static readonly IComparer<CalculateTaskViewModel> ElapsedComparer =
+        Comparer<CalculateTaskViewModel>.Create((a, b) => a.Elapsed.CompareTo(b.Elapsed));
+
+    /// <summary>
+    /// 已计算文件夹数列比较器, 严格按文件夹数排序
+    /// </summary>
+    private static readonly IComparer<CalculateTaskViewModel> FoldersCalculatedComparer =
+        Comparer<CalculateTaskViewModel>.Create((a, b) => a.FoldersCalculated.CompareTo(b.FoldersCalculated));
+
+    /// <summary>
+    /// 已计算文件数列比较器, 严格按文件数排序
+    /// </summary>
+    private static readonly IComparer<CalculateTaskViewModel> FilesCalculatedComparer =
+        Comparer<CalculateTaskViewModel>.Create((a, b) => a.FilesCalculated.CompareTo(b.FilesCalculated));
+
+    /// <summary>
+    /// 速度列比较器, 严格按速度排序
+    /// </summary>
+    private static readonly IComparer<CalculateTaskViewModel> SpeedBytesPerSecondComparer =
+        Comparer<CalculateTaskViewModel>.Create((a, b) =>
+            a.SpeedBytesPerSecond.CompareTo(b.SpeedBytesPerSecond)
+        );
+
+    /// <summary>
+    /// 已计算字节数列比较器, 严格按字节数排序
+    /// </summary>
+    private static readonly IComparer<CalculateTaskViewModel> BytesCalculatedComparer =
+        Comparer<CalculateTaskViewModel>.Create((a, b) => a.BytesCalculated.CompareTo(b.BytesCalculated));
+
+    /// <summary>
+    /// 基于路径的计算任务视图模型比较器
+    /// </summary>
+    private readonly IComparer<CalculateTaskViewModel> PathComparer;
+
     /// <summary>
     /// 文件系统
     /// </summary>
@@ -41,9 +93,14 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     private readonly IStorageAccessService _storageAccessService;
 
     /// <summary>
-    /// 主窗口提供器, 用于系统文件夹选择器与消息对话框
+    /// 顶层视图提供器, 用于系统文件夹选择器与剪贴板
     /// </summary>
-    private readonly IMainWindowProvider _mainWindowProvider;
+    private readonly ITopLevelProvider _topLevelProvider;
+
+    /// <summary>
+    /// 全局短暂提示视图模型
+    /// </summary>
+    private readonly ToastViewModel _toast;
 
     /// <summary>
     /// 路径比较使用的字符串比较器
@@ -51,14 +108,9 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     private readonly StringComparer _pathComparer;
 
     /// <summary>
-    /// 缓存数刷新计时器, 定时拉取最新缓存数并合并更新, 避免每个目录完成时都向 UI 线程投递更新
+    /// 界面状态刷新计时器, 定时拉取缓存条目数与存储访问权限并合并更新, 避免高频事件直接投递到 UI 线程
     /// </summary>
-    private readonly DispatcherTimer _cacheCountTimer;
-
-    /// <summary>
-    /// 当前是否可以开始计算
-    /// </summary>
-    public bool CanStart => InputPaths.Count > 0;
+    private readonly DispatcherTimer _uiRefreshTimer;
 
     /// <summary>
     /// 输入列表, 待计算的文件夹路径
@@ -73,7 +125,7 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     /// <summary>
     /// 任务列表
     /// </summary>
-    public ObservableCollection<ScanTaskViewModel> Tasks { get; } = [];
+    public ObservableCollection<CalculateTaskViewModel> Tasks { get; } = [];
 
     /// <summary>
     /// 是否显示存储访问权限横幅, 未授予全部文件访问权限时为 <see langword="true"/>
@@ -105,100 +157,65 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     public IReadOnlyList<string> SelectedHistories { get; set; } = [];
 
     /// <summary>
-    /// 输入按钮的悬浮提示: 已选中条目时提示将覆盖该条目
+    /// 输入按钮文本: 未选中条目时显示添加, 已选中时显示覆盖
     /// </summary>
-    public string InputTip => SelectedInputPath is null
-        ? "添加到待计算列表"
-        : $"将覆盖已选择的输入: {SelectedInputPath}";
+    public string InputButtonText => SelectedInputPath is null ? "添加" : "覆盖";
 
     /// <summary>
-    /// 创建主窗口视图模型
+    /// 当前是否可以开始计算
     /// </summary>
-    /// <param name="coreOptions">核心选项</param>
+    public bool CanStart => InputPaths.Count > 0;
+
+    /// <summary>
+    /// 创建主视图模型
+    /// </summary>
+    /// <param name="coreOptions">Core 选项</param>
     /// <param name="fileSystem">文件系统</param>
     /// <param name="calculator">文件夹大小计算器</param>
     /// <param name="historiesStore">历史存储</param>
     /// <param name="storageAccessService">存储访问服务</param>
-    /// <param name="mainWindowProvider">主窗口提供器</param>
-    public MainWindowViewModel(
+    /// <param name="topLevelProvider">顶层视图提供器</param>
+    /// <param name="toastViewModel">全局短暂提示视图模型</param>
+    public MainViewModel(
         CoreOptions coreOptions,
         IFileSystem fileSystem,
         IFolderSizeCalculator calculator,
         IHistoriesStore historiesStore,
         IStorageAccessService storageAccessService,
-        IMainWindowProvider mainWindowProvider)
+        ITopLevelProvider topLevelProvider,
+        ToastViewModel toastViewModel)
     {
+        _toast = toastViewModel;
         _fileSystem = fileSystem;
         _calculator = calculator;
         _historiesStore = historiesStore;
         _storageAccessService = storageAccessService;
-        _mainWindowProvider = mainWindowProvider;
+        _topLevelProvider = topLevelProvider;
         _pathComparer = coreOptions.PathComparer;
-        _cacheCountTimer = new(
-            TimeSpan.FromMilliseconds(Constants.CacheCountRefreshIntervalMilliseconds),
+        PathComparer = Comparer<CalculateTaskViewModel>.Create((a, b) =>
+            _pathComparer.Compare(a.Path, b.Path)
+        );
+        _uiRefreshTimer = new(
+            TimeSpan.FromMilliseconds(Constants.UiRefreshIntervalMilliseconds),
             DispatcherPriority.Background,
-            OnCacheCountTimerTick);
-        _cacheCountTimer.Start();
-        RefreshHistories();
+            OnUiRefreshTimerTick
+        );
+        _uiRefreshTimer.Start();
         RefreshStorageAccess();
+        RefreshHistories();
     }
 
     /// <inheritdoc/>
-    public override void Dispose()
+    public void Dispose()
     {
-        _cacheCountTimer.Stop();
+        _uiRefreshTimer.Stop();
         foreach (var task in Tasks)
         {
             task.DeleteRequested -= OnTaskDeleteRequested;
-            task.ToastRequested -= ShowFeedback;
+            task.ToastRequested -= _toast.Show;
             task.Dispose();
         }
-        base.Dispose();
-    }
-
-    /// <summary>
-    /// 对任务列表按指定列排序
-    /// </summary>
-    /// <param name="key">排序列标识</param>
-    /// <param name="ascending">是否升序</param>
-    public void ApplySort(string key, bool ascending)
-    {
-        var comparer = key switch
-        {
-            nameof(ScanTaskViewModel.Path) => Comparer<ScanTaskViewModel>.Create((a, b) =>
-                _pathComparer.Compare(a.Path, b.Path)),
-            nameof(ScanTaskViewModel.StatusText) => Comparer<ScanTaskViewModel>.Create((a, b) =>
-                {
-                    var completed = a.IsCompleted.CompareTo(b.IsCompleted);
-                    return completed != 0 ? completed : a.Status.CompareTo(b.Status);
-                }),
-            nameof(ScanTaskViewModel.StartTime) => Comparer<ScanTaskViewModel>.Create((a, b) =>
-                a.StartTime.CompareTo(b.StartTime)),
-            nameof(ScanTaskViewModel.Elapsed) => Comparer<ScanTaskViewModel>.Create((a, b) =>
-                a.Elapsed.CompareTo(b.Elapsed)),
-            nameof(ScanTaskViewModel.FoldersScanned) => Comparer<ScanTaskViewModel>.Create((a, b) =>
-                a.FoldersScanned.CompareTo(b.FoldersScanned)),
-            nameof(ScanTaskViewModel.FilesScanned) => Comparer<ScanTaskViewModel>.Create((a, b) =>
-                a.FilesScanned.CompareTo(b.FilesScanned)),
-            nameof(ScanTaskViewModel.SpeedBytesPerSecond) => Comparer<ScanTaskViewModel>.Create((a, b) =>
-                a.SpeedBytesPerSecond.CompareTo(b.SpeedBytesPerSecond)),
-            nameof(ScanTaskViewModel.BytesScanned) => Comparer<ScanTaskViewModel>.Create((a, b) =>
-                a.BytesScanned.CompareTo(b.BytesScanned)),
-            _ => Comparer<ScanTaskViewModel>.Default
-        };
-
-        var list = Tasks.ToList();
-        list.Sort(comparer);
-        if (!ascending)
-        {
-            list.Reverse();
-        }
-
-        Tasks.Clear();
-        foreach (var task in list)
-        {
-            Tasks.Add(task);
-        }
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -208,8 +225,18 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     partial void OnSelectedInputPathChanged(string? value)
     {
         InputPath = value ?? string.Empty;
-        OnPropertyChanged(nameof(InputTip));
+        OnPropertyChanged(nameof(InputButtonText));
     }
+
+    /// <summary>
+    /// 请求打开设置抽屉的事件, 由壳视图模型处理
+    /// </summary>
+    public event Action? SettingsRequested;
+
+    /// <summary>
+    /// 请求打开目录选择器的事件, 由壳视图模型处理
+    /// </summary>
+    public event Action? DirectoryPickerRequested;
 
     /// <summary>
     /// 请求授予全部文件访问权限, 安卓端跳转系统设置页
@@ -227,18 +254,16 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     private void ClearCache()
     {
         var cleared = _calculator.TryClearCache();
-        ShowFeedback(cleared ? "缓存已清理" : "存在进行中的计算任务, 无法清理缓存");
+        _toast.Show(cleared ? "缓存已清理" : "存在进行中的计算任务, 无法清理缓存");
     }
 
     /// <summary>
-    /// 打开设置窗口
+    /// 打开设置抽屉
     /// </summary>
     [RelayCommand]
     private void OpenSettings()
     {
-        var viewModel = App.Services.GetRequiredService<SettingsWindowViewModel>();
-        var window = new SettingsWindow { DataContext = viewModel };
-        window.Show(_mainWindowProvider.MainWindow);
+        SettingsRequested?.Invoke();
     }
 
     /// <summary>
@@ -249,18 +274,11 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     {
         if (OperatingSystem.IsAndroid())
         {
-            var viewModel = ActivatorUtilities.CreateInstance<DirectoryPickerViewModel>(App.Services);
-            var window = new DirectoryPickerWindow { DataContext = viewModel };
-            var selected = await window.ShowDialog<string?>(_mainWindowProvider.MainWindow);
-            if (selected is not null && !InputPaths.Any(p => _pathComparer.Equals(p, selected)))
-            {
-                InputPaths.Add(selected);
-                StartCalculationsCommand.NotifyCanExecuteChanged();
-            }
+            DirectoryPickerRequested?.Invoke();
             return;
         }
 
-        var topLevel = _mainWindowProvider.MainWindow;
+        var topLevel = _topLevelProvider.TopLevel;
         var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new()
         {
             Title = "选择文件夹",
@@ -323,21 +341,21 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
             return;
         }
 
-        var clipboard = _mainWindowProvider.MainWindow.Clipboard;
+        var clipboard = _topLevelProvider.TopLevel.Clipboard;
         if (clipboard is null)
         {
-            ShowFeedback("剪贴板不可用");
+            _toast.Show("剪贴板不可用");
             return;
         }
 
         try
         {
             await clipboard.SetTextAsync(path);
-            ShowFeedback($"已复制: {path}");
+            _toast.Show($"已复制: {path}");
         }
         catch (Exception)
         {
-            ShowFeedback("复制失败");
+            _toast.Show("复制失败");
         }
     }
 
@@ -427,9 +445,9 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
         var paths = InputPaths.ToArray();
         foreach (var path in paths)
         {
-            var task = ActivatorUtilities.CreateInstance<ScanTaskViewModel>(App.Services, path);
+            var task = ActivatorUtilities.CreateInstance<CalculateTaskViewModel>(App.Services, path);
             task.DeleteRequested += OnTaskDeleteRequested;
-            task.ToastRequested += ShowFeedback;
+            task.ToastRequested += _toast.Show;
             Tasks.Add(task);
         }
 
@@ -442,11 +460,69 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     }
 
     /// <summary>
-    /// 重新检查存储访问权限并更新横幅显示, 窗口从系统设置页授权返回时调用
+    /// 重新检查存储访问权限并更新横幅显示, 由缓存数计时器定时调用, 权限变化时自动刷新
     /// </summary>
     public void RefreshStorageAccess()
     {
-        ShowStorageAccessBanner = !_storageAccessService.IsGranted;
+        var showBanner = !_storageAccessService.IsGranted;
+        if (ShowStorageAccessBanner != showBanner)
+        {
+            ShowStorageAccessBanner = showBanner;
+        }
+    }
+
+    /// <summary>
+    /// 显示全局短暂提示, 供视图直接调用
+    /// </summary>
+    /// <param name="message">提示文本</param>
+    public void ShowToast(string message)
+    {
+        _toast.Show(message);
+    }
+
+    /// <summary>
+    /// 将指定路径加入输入列表, 已存在则跳过
+    /// </summary>
+    /// <param name="path">文件夹路径</param>
+    public void AddInputPath(string path)
+    {
+        if (!InputPaths.Any(p => _pathComparer.Equals(p, path)))
+        {
+            InputPaths.Add(path);
+            StartCalculationsCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    /// <summary>
+    /// 对任务列表按指定列排序
+    /// </summary>
+    /// <param name="key">排序列标识</param>
+    /// <param name="ascending">是否升序</param>
+    public void ApplySort(string key, bool ascending)
+    {
+        var list = Tasks.ToList();
+        list.Sort(key switch
+        {
+            nameof(CalculateTaskViewModel.Path) => PathComparer,
+            nameof(CalculateTaskViewModel.StatusText) => StatusTextComparer,
+            nameof(CalculateTaskViewModel.StartTime) => StartTimeComparer,
+            nameof(CalculateTaskViewModel.Elapsed) => ElapsedComparer,
+            nameof(CalculateTaskViewModel.FoldersCalculated) => FoldersCalculatedComparer,
+            nameof(CalculateTaskViewModel.FilesCalculated) => FilesCalculatedComparer,
+            nameof(CalculateTaskViewModel.SpeedBytesPerSecond) => SpeedBytesPerSecondComparer,
+            nameof(CalculateTaskViewModel.BytesCalculated) => BytesCalculatedComparer,
+            _ => Comparer<CalculateTaskViewModel>.Default
+        });
+        if (!ascending)
+        {
+            list.Reverse();
+        }
+
+        Tasks.Clear();
+        foreach (var task in list)
+        {
+            Tasks.Add(task);
+        }
     }
 
     /// <summary>
@@ -465,25 +541,26 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     /// 移除指定任务, 运行中的任务一并取消
     /// </summary>
     /// <param name="task">要移除的任务</param>
-    private void OnTaskDeleteRequested(ScanTaskViewModel task)
+    private void OnTaskDeleteRequested(CalculateTaskViewModel task)
     {
         task.DeleteRequested -= OnTaskDeleteRequested;
-        task.ToastRequested -= ShowFeedback;
+        task.ToastRequested -= _toast.Show;
         _ = Tasks.Remove(task);
         task.Dispose();
     }
 
     /// <summary>
-    /// 定时拉取缓存数: 与当前显示值不同才更新, 计时器常驻, 避免启停竞态导致显示停在旧值
+    /// 定时刷新界面状态: 拉取缓存条目数与存储访问权限, 与当前显示值不同才更新, 计时器常驻
     /// </summary>
     /// <param name="sender">计时器</param>
     /// <param name="e">计时器事件参数</param>
-    private void OnCacheCountTimerTick(object? sender, EventArgs e)
+    private void OnUiRefreshTimerTick(object? sender, EventArgs e)
     {
         var count = _calculator.CacheCount;
         if (CacheCount != count)
         {
             CacheCount = count;
         }
+        RefreshStorageAccess();
     }
 }

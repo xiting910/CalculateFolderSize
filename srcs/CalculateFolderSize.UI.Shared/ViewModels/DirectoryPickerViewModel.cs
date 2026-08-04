@@ -11,12 +11,17 @@ namespace CalculateFolderSize.UI.Shared.ViewModels;
 /// <summary>
 /// 目录选择视图模型, 供安卓端浏览共享存储并选择要计算的文件夹
 /// </summary>
-public sealed partial class DirectoryPickerViewModel : ToastViewModelBase
+public sealed partial class DirectoryPickerViewModel : ObservableObject
 {
     /// <summary>
     /// 文件系统
     /// </summary>
     private readonly IFileSystem _fileSystem;
+
+    /// <summary>
+    /// 全局短暂提示视图模型
+    /// </summary>
+    private readonly ToastViewModel _toast;
 
     /// <summary>
     /// 父目录栈, 栈顶为当前目录的父目录
@@ -44,9 +49,11 @@ public sealed partial class DirectoryPickerViewModel : ToastViewModelBase
     /// 创建目录选择视图模型
     /// </summary>
     /// <param name="fileSystem">文件系统</param>
-    public DirectoryPickerViewModel(IFileSystem fileSystem)
+    /// <param name="toastViewModel">全局短暂提示视图模型</param>
+    public DirectoryPickerViewModel(IFileSystem fileSystem, ToastViewModel toastViewModel)
     {
         _fileSystem = fileSystem;
+        _toast = toastViewModel;
         CurrentPath = Constants.AndroidSharedStorageRoot;
         Refresh();
     }
@@ -60,6 +67,32 @@ public sealed partial class DirectoryPickerViewModel : ToastViewModelBase
         _upStack.Push(CurrentPath);
         CurrentPath = directory.FullName;
         Refresh();
+    }
+
+    /// <summary>
+    /// 选中目录的事件, 由壳视图模型处理
+    /// </summary>
+    public event Action<string>? DirectorySelected;
+
+    /// <summary>
+    /// 取消选择的事件, 由壳视图模型处理
+    /// </summary>
+    public event Action? CancelRequested;
+
+    /// <summary>
+    /// 确认选择当前目录
+    /// </summary>
+    public void ConfirmSelection()
+    {
+        DirectorySelected?.Invoke(CurrentPath);
+    }
+
+    /// <summary>
+    /// 取消选择
+    /// </summary>
+    public void Cancel()
+    {
+        CancelRequested?.Invoke();
     }
 
     /// <summary>
@@ -89,7 +122,7 @@ public sealed partial class DirectoryPickerViewModel : ToastViewModelBase
         }
         catch (Exception ex)
         {
-            ShowFeedback($"无法读取目录: {ex.Message}");
+            _toast.Show($"无法读取目录: {ex.Message}");
         }
     }
 }

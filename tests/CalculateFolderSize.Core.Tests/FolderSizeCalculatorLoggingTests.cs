@@ -23,6 +23,7 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
     public void Dispose()
     {
         _calculator.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public sealed class FolderSizeCalculatorLoggingTests : IDisposable
     }
 
     [Fact]
-    public void GetFromFolder_Cancellation_LogsScanCanceledAndThrows()
+    public void GetFromFolder_Cancellation_LogsCalculateCanceledAndThrows()
     {
         const string path = @"C:\Dir";
         using var cts = new CancellationTokenSource();

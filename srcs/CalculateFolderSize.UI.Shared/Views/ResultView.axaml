@@ -1,80 +1,54 @@
-<Window x:Class="CalculateFolderSize.UI.Shared.Views.ResultWindow"
-        xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
-        xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
-        x:DataType="vm:ResultWindowViewModel"
-        Icon="/Assets/logo.ico"
-        Title="{Binding Title}"
-        Width="960" Height="620"
-        WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource WindowBackgroundBrush}">
-
-  <Window.Resources>
-    <ResourceDictionary>
-      <ResourceDictionary.ThemeDictionaries>
-
-        <!-- 浅色主题 -->
-        <ResourceDictionary x:Key="Light">
-          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F2F5FA"/>
-          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#1E5FCC"/>
-          <SolidColorBrush x:Key="SeparatorBrush" Color="#33000000"/>
-          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#2E6FDB"/>
-          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
-        </ResourceDictionary>
-
-        <!-- 深色主题 -->
-        <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#1A1D24"/>
-          <SolidColorBrush x:Key="TitleForegroundBrush" Color="#7FB0FF"/>
-          <SolidColorBrush x:Key="SeparatorBrush" Color="#40FFFFFF"/>
-          <SolidColorBrush x:Key="PrimaryButtonBackgroundBrush" Color="#4C8DF6"/>
-          <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="#FFFFFF"/>
-        </ResourceDictionary>
-
-      </ResourceDictionary.ThemeDictionaries>
-    </ResourceDictionary>
-  </Window.Resources>
+<UserControl x:Class="CalculateFolderSize.UI.Shared.Views.ResultView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
+             x:DataType="vm:ResultViewModel"
+             Background="{DynamicResource WindowBackgroundBrush}">
 
   <Panel>
 
     <DockPanel>
 
-      <!-- 根目录计算摘要, 左侧紧跟根路径, 右侧提示双击操作 -->
-      <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="8,6">
-        <StackPanel Orientation="Horizontal" Spacing="12">
-          <TextBlock Text="{Binding RootPath}" FontWeight="Bold"
-                     Foreground="{DynamicResource TitleForegroundBrush}" VerticalAlignment="Center"
-                     TextTrimming="CharacterEllipsis" MaxWidth="420"/>
-          <TextBlock Text="{Binding RootSizeText, StringFormat='大小: {0}'}" VerticalAlignment="Center"/>
-          <TextBlock Text="{Binding RootFolderCount, StringFormat='文件夹: {0}'}" VerticalAlignment="Center"/>
-          <TextBlock Text="{Binding RootFileCount, StringFormat='文件: {0}'}" VerticalAlignment="Center"/>
-        </StackPanel>
-        <TextBlock Grid.Column="2" Text="双击子文件夹进入子项, 双击文件打开" FontSize="12"
-                   Opacity="0.6" VerticalAlignment="Center"/>
+      <!-- 第 1 行: 返回按钮 + 根目录路径 -->
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="8,6,8,0">
+        <Button Content="← 返回" Click="OnBackClick" VerticalAlignment="Center"
+                Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
+        <TextBlock Grid.Column="1" Text="{Binding RootPath}" FontWeight="Bold"
+                   Foreground="{DynamicResource TitleForegroundBrush}" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"/>
       </Grid>
 
-      <!-- 面包屑导航, 右侧提供打开文件夹按钮 -->
+      <!-- 第 2 行: 根目录计算结果 -->
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="8,4,8,0">
+        <TextBlock Text="{Binding RootSizeText, StringFormat='大小: {0}'}"/>
+        <TextBlock Text="{Binding RootFolderCount, StringFormat='文件夹: {0}'}"/>
+        <TextBlock Text="{Binding RootFileCount, StringFormat='文件: {0}'}"/>
+      </StackPanel>
+
+      <!-- 第 3 行: 面包屑导航横向滚动, 右侧提供打开文件夹按钮 (仅桌面端) -->
       <Border DockPanel.Dock="Top" Padding="8,6" BorderThickness="0,0,0,1"
               BorderBrush="{DynamicResource SeparatorBrush}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <ItemsControl ItemsSource="{Binding Breadcrumbs}" VerticalAlignment="Center">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate>
-                <StackPanel Orientation="Horizontal"/>
-              </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:BreadcrumbItemViewModel">
-                <StackPanel Orientation="Horizontal">
-                  <Button Content="{Binding Name}" Command="{Binding NavigateCommand}" Padding="6,2"/>
-                  <TextBlock Text=">" VerticalAlignment="Center" Margin="2,0"/>
-                </StackPanel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                        HorizontalAlignment="Stretch">
+            <ItemsControl ItemsSource="{Binding Breadcrumbs}" VerticalAlignment="Center">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BreadcrumbItemViewModel">
+                  <StackPanel Orientation="Horizontal">
+                    <Button Content="{Binding Name}" Command="{Binding NavigateCommand}" Padding="6,2"/>
+                    <TextBlock Text=">" VerticalAlignment="Center" Margin="2,0"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
           <Button Grid.Column="1" Content="打开文件夹" Command="{Binding OpenInExplorerCommand}"
-                  VerticalAlignment="Center"
+                  IsVisible="{Binding ShowOpenFolderButton}" VerticalAlignment="Center"
                   Background="{DynamicResource PrimaryButtonBackgroundBrush}" Foreground="{DynamicResource PrimaryButtonForegroundBrush}"/>
         </Grid>
       </Border>
@@ -139,9 +113,6 @@
 
     </DockPanel>
 
-    <!-- 右下角 Toast 通知 -->
-    <views:ToastView/>
-
   </Panel>
 
-</Window>
+</UserControl>

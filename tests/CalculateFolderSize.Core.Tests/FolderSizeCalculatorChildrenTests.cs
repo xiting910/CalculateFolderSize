@@ -22,10 +22,11 @@ public sealed class FolderSizeCalculatorChildrenTests : IDisposable
     public void Dispose()
     {
         _calculator.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
-    public void TryGetFolderChildren_AfterCapturedScan_ReturnsFileAndDirectoryChildren()
+    public void TryGetFolderChildren_AfterCapturedCalculate_ReturnsFileAndDirectoryChildren()
     {
         const string rootPath = @"C:\Root";
         const string subPath = @"C:\Root\SubDir";

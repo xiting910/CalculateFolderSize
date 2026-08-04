@@ -35,7 +35,7 @@ file static class Program
             level = LogLevel.Information;
         }
 
-        var services = new ServiceCollection()
+        App.Services = new ServiceCollection()
             .AddLogging(builder => builder.AddFile(Constants.LatestLogFilePath, o => o.MinLevel = level))
             .AddSingleton<IConfiguration>(configuration)
             .AddCore()
@@ -43,7 +43,6 @@ file static class Program
             .AddSingleton<IStorageAccessService, DesktopStorageAccessService>()
             .BuildServiceProvider();
 
-        App.Services = services;
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
