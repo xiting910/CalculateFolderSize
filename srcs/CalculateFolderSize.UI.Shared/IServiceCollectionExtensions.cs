@@ -21,6 +21,9 @@ public static class IServiceCollectionExtensions
         /// <summary>
         /// 注册 UI 共享层的所有服务
         /// </summary>
+        /// <remarks>
+        /// <see cref="IStorageAccessService"/> 的实现需要由各平台自行注册, 该方法不会注册
+        /// </remarks>
         /// <returns>服务集合</returns>
         public IServiceCollection AddUIShared()
         {

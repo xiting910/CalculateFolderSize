@@ -50,6 +50,9 @@
 - **桌面端 Windows 兼容清单**: 新增 `app.manifest` (supportedOS Windows 10), 避免窗口透明与嵌入控件问题
 - **Android 发布签名**: 正式 keystore 签名 (密钥经 GitHub Secret `ANDROID_KEYSTORE_B64` 存储, 发布流解码后签名), Release 签名配置带 keystore 存在检查, 本地/发布流正式签名, CI 回退默认签名
 - **ReBuild.bat 重构**: 清理范围扩至 `publish` 文件夹; 流程重排为 restore → build → publish (Cli / UI.Desktop / Android 发布到根目录 `publish`, 均使用 `--no-restore`); 固定工作目录为脚本所在目录
+- **存储访问权限服务**: 新增 `IStorageAccessService` 接口与平台实现 (桌面恒已授权, 安卓检查并跳转系统设置页引导 `MANAGE_EXTERNAL_STORAGE` 授权), 主窗口顶部横幅在未授权时提示并提供"去授权"入口, 未授权时跳过文件日志避免启动崩溃
+- **安卓内置目录选择器**: 新增 `DirectoryPickerWindow`, 基于 `IFileSystem` 枚举共享存储物理路径逐层浏览, 替代 SAF 目录树选择器
+- **安卓共享存储目录**: 应用数据与日志目录移至共享存储 (`/storage/emulated/0/CalculateFolderSize`), 用户可直接用文件管理器浏览设置/历史/日志文件
 
 ### Changed
 
@@ -85,6 +88,10 @@
 - **发布流**: 桌面端产物由单文件改为整目录压缩 zip (单文件发布仍残留 SkiaSharp/HarfBuzz 等原生 DLL, 需随 exe 分发), zip 内排除 pdb/xml; Android 产物为正式签名 APK
 - **设置窗口**: 主题区块移至最顶端 (即时生效项置顶)
 - **Android 图标资源名**: 资源引用统一为小写 `@drawable/icon` (aapt 资源名强制小写, 物理文件名保持 `Icon.png`)
+- **抛弃 SAF 方案**: `AndroidFileSystem` (ContentResolver + DocumentFile) 实现需求取消, `AddCore` 移除 `isDesktop` 参数统一注册 `FileSystem`, 安卓端复用桌面文件系统实现, 路径语义统一为物理路径
+- **Android 最低 API 提升至 30**: `MANAGE_EXTERNAL_STORAGE` 权限自 API 30 起可用, 免除低版本运行时权限兼容逻辑
+- **日志导出简化**: 移除 SAF 文件夹选择器复制, 日志位于共享存储可直接用文件管理器浏览
+- **SystemOpener 简化**: 移除安卓 Launcher/content URI 分支, 安卓端暂不支持打开文件或文件夹
 
 ### Removed
 
@@ -94,6 +101,8 @@
 - `App.ParsePaths` 私有方法 — 解析逻辑移至 `UserInputProcessor` 服务
 - `SmokeTest.cs` — 被覆盖真实场景的 CLI 层单元测试替代
 - `InternalsVisibleTo("DynamicProxyGenAssembly2")` — `IFileSystem` 公开后 Moq 可直接模拟 public 接口, 不再需要
+- `AndroidFileSystem` (SAF) 实现 — 被全部文件访问权限 + 统一 `FileSystem` 取代
+- `SettingsWindowViewModel.ExportLogsAsync` — SAF 日志导出逻辑, 日志改共享存储后不再需要
 
 ### Fixed
 

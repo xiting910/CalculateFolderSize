@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using CalculateFolderSize.UI.Shared.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -35,6 +36,20 @@ public partial class MainWindow : Window
         InitializeComponent();
         InputPathsListBox.AddHandler(PointerPressedEvent, OnPathListPointerPressed, RoutingStrategies.Tunnel);
         HistoriesListBox.AddHandler(PointerPressedEvent, OnPathListPointerPressed, RoutingStrategies.Tunnel);
+        Activated += OnActivated;
+    }
+
+    /// <summary>
+    /// 窗口激活时重新检查存储访问权限, 覆盖从系统设置页授权返回的场景
+    /// </summary>
+    /// <param name="sender">窗口</param>
+    /// <param name="e">事件参数</param>
+    private void OnActivated(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.RefreshStorageAccess();
+        }
     }
 
     /// <summary>

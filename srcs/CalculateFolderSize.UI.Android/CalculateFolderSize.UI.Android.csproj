@@ -5,7 +5,7 @@
     <TargetFramework>$(TargetFramework)-android</TargetFramework>
     <ApplicationId>com.$(Author).$(ProductName.ToLowerInvariant())</ApplicationId>
     <ApplicationIdTitle>$(ProductName)</ApplicationIdTitle>
-    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>30</SupportedOSPlatformVersion>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>

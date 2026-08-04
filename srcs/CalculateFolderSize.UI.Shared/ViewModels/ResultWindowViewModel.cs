@@ -53,11 +53,6 @@ public sealed partial class ResultWindowViewModel : ToastViewModelBase
     private readonly IFolderSizeCalculator _calculator;
 
     /// <summary>
-    /// 主窗口提供器, 安卓端用于访问系统 Launcher
-    /// </summary>
-    private readonly IMainWindowProvider _mainWindowProvider;
-
-    /// <summary>
     /// 导航快照栈, 栈顶为当前目录的父目录
     /// </summary>
     private readonly Stack<Snapshot> _navigationStack = new();
@@ -78,14 +73,12 @@ public sealed partial class ResultWindowViewModel : ToastViewModelBase
     /// <param name="coreOptions">核心选项</param>
     /// <param name="formatter">文件大小格式化器</param>
     /// <param name="calculator">文件夹大小计算器</param>
-    /// <param name="mainWindowProvider">主窗口提供器</param>
     /// <param name="rootPath">根文件夹路径</param>
     /// <param name="rootSize">根文件夹大小</param>
     public ResultWindowViewModel(
         CoreOptions coreOptions,
         IFileSizeFormatter formatter,
         IFolderSizeCalculator calculator,
-        IMainWindowProvider mainWindowProvider,
         string rootPath,
         FolderSize rootSize)
     {
@@ -95,7 +88,6 @@ public sealed partial class ResultWindowViewModel : ToastViewModelBase
 
         _calculator = calculator;
         _formatter = formatter;
-        _mainWindowProvider = mainWindowProvider;
         RootPath = rootPath;
         _rootSize = rootSize;
 
@@ -193,7 +185,7 @@ public sealed partial class ResultWindowViewModel : ToastViewModelBase
     /// <param name="item">文件子项</param>
     public void OpenFile(ResultItemViewModel item)
     {
-        if (!SystemOpener.TryOpen(item.Path, _mainWindowProvider.MainWindow.Launcher, out var errorMessage))
+        if (!SystemOpener.TryOpen(item.Path, out var errorMessage))
         {
             ShowFeedback(errorMessage);
         }
@@ -205,7 +197,7 @@ public sealed partial class ResultWindowViewModel : ToastViewModelBase
     [RelayCommand]
     private void OpenInExplorer()
     {
-        if (!SystemOpener.TryOpen(_current.Path, _mainWindowProvider.MainWindow.Launcher, out var errorMessage))
+        if (!SystemOpener.TryOpen(_current.Path, out var errorMessage))
         {
             ShowFeedback(errorMessage);
         }

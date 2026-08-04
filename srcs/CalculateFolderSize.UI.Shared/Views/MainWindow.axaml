@@ -40,17 +40,26 @@
 
   <Panel>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,*">
+
+      <!-- 存储访问权限横幅, 未授权时显示 -->
+      <Border Grid.Row="0" IsVisible="{Binding ShowStorageAccessBanner}"
+              Background="#B3261E" Padding="8,4">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="需要授予全部文件访问权限才能扫描文件夹" Foreground="White" VerticalAlignment="Center"/>
+          <Button Content="去授权" Command="{Binding RequestAccessCommand}" Padding="10,2"/>
+        </StackPanel>
+      </Border>
 
       <!-- 顶部标题栏, 居中显示 -->
-      <Grid Grid.Row="0" Margin="8,8,8,0">
+      <Grid Grid.Row="1" Margin="8,8,8,0">
         <TextBlock Text="CalculateFolderSize" FontSize="18" FontWeight="Bold"
                    Foreground="{DynamicResource TitleForegroundBrush}"
                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
       </Grid>
 
       <!-- 缓存信息行, 按钮靠右: 清理缓存 在 设置 左侧 -->
-      <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" Margin="8,4">
+      <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" Margin="8,4">
         <TextBlock Text="缓存条目: " VerticalAlignment="Center"/>
         <TextBlock Grid.Column="1" Text="{Binding CacheCount}" VerticalAlignment="Center"/>
         <Button Grid.Column="3" Content="清理缓存" Command="{Binding ClearCacheCommand}" VerticalAlignment="Center"
@@ -59,7 +68,7 @@
       </Grid>
 
       <!-- 输入区, 仅保留输入按钮 -->
-      <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="8,4">
+      <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="8,4">
         <TextBox Text="{Binding InputPath}" PlaceholderText="输入文件夹路径..." VerticalAlignment="Center"/>
         <Button Grid.Column="1" Content="输入" Command="{Binding AddInputCommand}"
                 ToolTip.Tip="{Binding InputTip}" Holding="OnControlHolding"
@@ -67,7 +76,7 @@
       </Grid>
 
       <!-- 输入列表与历史记录 -->
-      <Grid Grid.Row="3" ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="8,4">
+      <Grid Grid.Row="4" ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="8,4">
         <Grid RowDefinitions="Auto,Auto,*">
           <TextBlock Text="待计算文件夹" Margin="0,0,0,4"/>
           <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="6">
@@ -101,7 +110,7 @@
       </Grid>
 
       <!-- 任务列表 -->
-      <Grid Grid.Row="4" RowDefinitions="Auto,*" Margin="8,4,8,8">
+      <Grid Grid.Row="5" RowDefinitions="Auto,*" Margin="8,4,8,8">
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
           <TextBlock Text="计算任务"/>
           <TextBlock Text="任务完成后双击可尝试查看详细结果" FontSize="12" Opacity="0.6" VerticalAlignment="Center"/>

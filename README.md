@@ -35,7 +35,7 @@
 - **多平台 UI**:
   - **CLI**: 基于 Spectre.Console 的交互式命令行工具, 支持多路径并发计算, 彩色输出和对齐显示
   - **桌面 (Desktop)**: 基于 Avalonia UI 的桌面应用, 支持多任务并行扫描 (实时进度/速度/耗时, 任务列可排序), 结果窗口逐层下钻浏览, 历史记录与设置持久化, 文件日志自动轮转
-  - **Android**: 基于 Avalonia UI 的 Android 应用, 完整入口 (服务容器注入/文件日志/启动画面), 发布产物为正式签名 APK
+  - **Android**: 基于 Avalonia UI 的 Android 应用, 完整入口 (服务容器注入/文件日志/启动画面), 全部文件访问权限引导与内置目录选择器, 发布产物为正式签名 APK
 - **可读的文件大小**: 自动将字节数转换为 B / KB / MB / GB / TB / PB / EB 等单位
 - **错误容忍**: 遇到无权访问的目录或文件时继续扫描, 计算完成后汇总显示错误信息
 
@@ -61,7 +61,7 @@ CalculateFolderSize/
 │   │   │   ├── FolderSize.cs               # 文件夹大小结果
 │   │   │   └── ProgressReport.cs           # 进度报告
 │   │   ├── Services/                       # 服务实现
-│   │   │   ├── DesktopFileSystem.cs        # 桌面端文件系统实现, 跳过重解析点并逐文件捕获异常
+│   │   │   ├── FileSystem.cs               # 文件系统实现, 跳过重解析点并逐文件捕获异常
 │   │   │   ├── FileSizeFormatter.cs        # 文件大小格式化器
 │   │   │   ├── FolderSizeCalculator.cs     # 文件夹大小计算器 (并行递归 + 缓存 + 并发锁 + 进度报告 + IDisposable)
 │   │   │   └── FolderSizeCalculator.Logging.cs # 日志事件定义 (LoggerMessage 源生成器)
@@ -89,7 +89,8 @@ CalculateFolderSize/
 │   │   ├── Interfaces/                     # 服务接口
 │   │   │   ├── ICalculateProgress.cs       # 计算进度接口
 │   │   │   ├── IHistoriesStore.cs          # 历史记录存储接口
-│   │   │   └── ISettingsStore.cs           # 设置存储接口
+│   │   │   ├── ISettingsStore.cs           # 设置存储接口
+│   │   │   └── IStorageAccessService.cs    # 存储访问权限服务接口
 │   │   ├── Models/                         # 数据模型
 │   │   │   ├── CalculateProgressUpdateEventArgs.cs # 进度更新事件参数
 │   │   │   ├── CalculateTaskStatus.cs      # 计算任务状态枚举
@@ -101,25 +102,29 @@ CalculateFolderSize/
 │   │   │   └── SettingsStore.cs            # 设置存储 (AppData/settings.json)
 │   │   ├── ViewModels/                     # 视图模型 (CommunityToolkit.Mvvm)
 │   │   │   ├── BreadcrumbItemViewModel.cs  # 结果窗口面包屑条目
-│   │   │   ├── MainWindowViewModel.cs      # 主窗口 (输入列表/历史/任务列表/缓存)
+│   │   │   ├── DirectoryPickerViewModel.cs # 目录选择器 (安卓端浏览共享存储)
+│   │   │   ├── MainWindowViewModel.cs      # 主窗口 (输入列表/历史/任务列表/缓存/权限横幅)
 │   │   │   ├── ResultItemViewModel.cs      # 结果窗口子项
 │   │   │   ├── ResultWindowViewModel.cs    # 结果窗口 (下钻浏览/面包屑导航/排序)
-│   │   │   ├── ScanTaskViewModel.cs        # 单个扫描任务 (执行/进度/状态/取消)
+│   │   │   ├── ScanTaskViewModel.cs        # 单个计算任务 (执行/进度/状态/取消)
 │   │   │   ├── SettingsWindowViewModel.cs  # 设置窗口 (配置/主题/日志/关于)
 │   │   │   └── ToastViewModelBase.cs       # Toast 短暂提示基类
 │   │   └── Views/                          # 视图 (Avalonia XAML)
+│   │       ├── DirectoryPickerWindow.axaml(.cs) # 目录选择窗口 (安卓端)
 │   │       ├── MainWindow.axaml(.cs)       # 主窗口
 │   │       ├── ResultWindow.axaml(.cs)     # 结果窗口
 │   │       ├── SettingsWindow.axaml(.cs)   # 设置窗口
 │   │       ├── ToastView.axaml(.cs)        # 右下角 Toast 提示
 │   │       └── ToolTipHelper.cs            # ToolTip 辅助
 │   ├── CalculateFolderSize.UI.Desktop/     # 桌面应用入口 (服务容器与配置加载, 文件日志与轮转, Windows 兼容清单)
+│   │   ├── DesktopStorageAccessService.cs  # 桌面存储访问服务 (恒已授权)
 │   │   ├── Program.cs                      # 程序入口点 (配置加载/服务容器/文件日志与轮转)
 │   │   └── app.manifest                    # Windows 应用清单 (supportedOS Windows 10)
-│   └── CalculateFolderSize.UI.Android/     # Android 应用入口 (MainActivity/Application/清单/启动画面资源)
+│   └── CalculateFolderSize.UI.Android/     # Android 应用入口 (MainActivity/MainApplication/清单/启动画面资源)
 │       ├── MainActivity.cs                 # Activity 入口 (AvaloniaMainActivity)
-│       ├── Application.cs                  # 应用类 (服务容器注入与文件日志, AvaloniaAndroidApplication<App>)
-│       ├── Properties/AndroidManifest.xml  # 应用清单 (应用名/图标)
+│       ├── MainApplication.cs              # 应用类 (服务容器注入与文件日志, AvaloniaAndroidApplication<App>)
+│       ├── StorageAccessService.cs         # 存储访问服务 (全部文件访问权限检查与授权引导)
+│       ├── Properties/AndroidManifest.xml  # 应用清单 (全部文件访问权限/应用名/图标)
 │       └── Resources/                      # Android 资源 (启动画面/主题/颜色/动画)
 ├── tests/
 │   ├── CalculateFolderSize.Core.Tests/     # Core 层单元测试 (xunit.v3 + Moq, 覆盖 Calculator/子项查询/日志/FileSystem/Formatter/Options)

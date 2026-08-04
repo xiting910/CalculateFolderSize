@@ -20,7 +20,7 @@ public sealed partial class App : Application
     {
         base.OnFrameworkInitializationCompleted();
 
-        _ = Directory.CreateDirectory(Constants.AppDataDirectory);
+        try { _ = Directory.CreateDirectory(Constants.AppDataDirectory); } catch { }
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

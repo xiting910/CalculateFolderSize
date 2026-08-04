@@ -36,6 +36,11 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     private readonly IHistoriesStore _historiesStore;
 
     /// <summary>
+    /// 存储访问服务, 用于检查全部文件访问权限并引导授权
+    /// </summary>
+    private readonly IStorageAccessService _storageAccessService;
+
+    /// <summary>
     /// 主窗口提供器, 用于系统文件夹选择器与消息对话框
     /// </summary>
     private readonly IMainWindowProvider _mainWindowProvider;
@@ -69,6 +74,12 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     /// 任务列表
     /// </summary>
     public ObservableCollection<ScanTaskViewModel> Tasks { get; } = [];
+
+    /// <summary>
+    /// 是否显示存储访问权限横幅, 未授予全部文件访问权限时为 <see langword="true"/>
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowStorageAccessBanner { get; set; }
 
     /// <summary>
     /// 路径输入框内容
@@ -107,17 +118,20 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     /// <param name="fileSystem">文件系统</param>
     /// <param name="calculator">文件夹大小计算器</param>
     /// <param name="historiesStore">历史存储</param>
+    /// <param name="storageAccessService">存储访问服务</param>
     /// <param name="mainWindowProvider">主窗口提供器</param>
     public MainWindowViewModel(
         CoreOptions coreOptions,
         IFileSystem fileSystem,
         IFolderSizeCalculator calculator,
         IHistoriesStore historiesStore,
+        IStorageAccessService storageAccessService,
         IMainWindowProvider mainWindowProvider)
     {
         _fileSystem = fileSystem;
         _calculator = calculator;
         _historiesStore = historiesStore;
+        _storageAccessService = storageAccessService;
         _mainWindowProvider = mainWindowProvider;
         _pathComparer = coreOptions.PathComparer;
         _cacheCountTimer = new(
@@ -126,6 +140,7 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
             OnCacheCountTimerTick);
         _cacheCountTimer.Start();
         RefreshHistories();
+        RefreshStorageAccess();
     }
 
     /// <inheritdoc/>
@@ -135,7 +150,7 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
         foreach (var task in Tasks)
         {
             task.DeleteRequested -= OnTaskDeleteRequested;
-            task.ToastRequested -= OnTaskToastRequested;
+            task.ToastRequested -= ShowFeedback;
             task.Dispose();
         }
         base.Dispose();
@@ -197,6 +212,25 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     }
 
     /// <summary>
+    /// 请求授予全部文件访问权限, 安卓端跳转系统设置页
+    /// </summary>
+    [RelayCommand]
+    private void RequestAccess()
+    {
+        _storageAccessService.RequestAccess();
+    }
+
+    /// <summary>
+    /// 一键清理缓存, 结果以短暂提示显示, 不弹窗
+    /// </summary>
+    [RelayCommand]
+    private void ClearCache()
+    {
+        var cleared = _calculator.TryClearCache();
+        ShowFeedback(cleared ? "缓存已清理" : "存在进行中的计算任务, 无法清理缓存");
+    }
+
+    /// <summary>
     /// 打开设置窗口
     /// </summary>
     [RelayCommand]
@@ -208,11 +242,24 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     }
 
     /// <summary>
-    /// 弹出系统文件夹选择器并加入输入列表
+    /// 弹出文件夹选择器并加入输入列表, 桌面端使用系统原生选择器, 安卓端使用内置目录浏览器
     /// </summary>
     [RelayCommand]
     private async Task PickFoldersAsync()
     {
+        if (OperatingSystem.IsAndroid())
+        {
+            var viewModel = ActivatorUtilities.CreateInstance<DirectoryPickerViewModel>(App.Services);
+            var window = new DirectoryPickerWindow { DataContext = viewModel };
+            var selected = await window.ShowDialog<string?>(_mainWindowProvider.MainWindow);
+            if (selected is not null && !InputPaths.Any(p => _pathComparer.Equals(p, selected)))
+            {
+                InputPaths.Add(selected);
+                StartCalculationsCommand.NotifyCanExecuteChanged();
+            }
+            return;
+        }
+
         var topLevel = _mainWindowProvider.MainWindow;
         var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new()
         {
@@ -362,6 +409,16 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     }
 
     /// <summary>
+    /// 清空历史记录
+    /// </summary>
+    [RelayCommand]
+    private void ClearHistory()
+    {
+        _historiesStore.Clear();
+        RefreshHistories();
+    }
+
+    /// <summary>
     /// 开始计算输入列表中的所有路径, 每个路径创建一个独立任务, 计算后写入历史记录
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanStart))]
@@ -372,7 +429,7 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
         {
             var task = ActivatorUtilities.CreateInstance<ScanTaskViewModel>(App.Services, path);
             task.DeleteRequested += OnTaskDeleteRequested;
-            task.ToastRequested += OnTaskToastRequested;
+            task.ToastRequested += ShowFeedback;
             Tasks.Add(task);
         }
 
@@ -385,44 +442,11 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
     }
 
     /// <summary>
-    /// 清空历史记录
+    /// 重新检查存储访问权限并更新横幅显示, 窗口从系统设置页授权返回时调用
     /// </summary>
-    [RelayCommand]
-    private void ClearHistory()
+    public void RefreshStorageAccess()
     {
-        _historiesStore.Clear();
-        RefreshHistories();
-    }
-
-    /// <summary>
-    /// 一键清理缓存, 结果以短暂提示显示, 不弹窗
-    /// </summary>
-    [RelayCommand]
-    private void ClearCache()
-    {
-        var cleared = _calculator.TryClearCache();
-        ShowFeedback(cleared ? "缓存已清理" : "存在进行中的计算任务, 无法清理缓存");
-    }
-
-    /// <summary>
-    /// 移除指定任务, 运行中的任务一并取消
-    /// </summary>
-    /// <param name="task">要移除的任务</param>
-    private void OnTaskDeleteRequested(ScanTaskViewModel task)
-    {
-        task.DeleteRequested -= OnTaskDeleteRequested;
-        task.ToastRequested -= OnTaskToastRequested;
-        _ = Tasks.Remove(task);
-        task.Dispose();
-    }
-
-    /// <summary>
-    /// 显示任务请求的短暂提示
-    /// </summary>
-    /// <param name="message">提示文本</param>
-    private void OnTaskToastRequested(string message)
-    {
-        ShowFeedback(message);
+        ShowStorageAccessBanner = !_storageAccessService.IsGranted;
     }
 
     /// <summary>
@@ -435,6 +459,18 @@ public sealed partial class MainWindowViewModel : ToastViewModelBase
         {
             Histories.Add(history);
         }
+    }
+
+    /// <summary>
+    /// 移除指定任务, 运行中的任务一并取消
+    /// </summary>
+    /// <param name="task">要移除的任务</param>
+    private void OnTaskDeleteRequested(ScanTaskViewModel task)
+    {
+        task.DeleteRequested -= OnTaskDeleteRequested;
+        task.ToastRequested -= ShowFeedback;
+        _ = Tasks.Remove(task);
+        task.Dispose();
     }
 
     /// <summary>

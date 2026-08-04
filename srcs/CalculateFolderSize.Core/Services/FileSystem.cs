@@ -8,9 +8,9 @@ using System.IO;
 namespace CalculateFolderSize.Core.Services;
 
 /// <summary>
-/// 桌面端文件系统
+/// 文件系统
 /// </summary>
-internal sealed class DesktopFileSystem : IFileSystem
+internal sealed class FileSystem : IFileSystem
 {
     /// <inheritdoc />
     public bool DirectoryExists([NotNullWhen(true)] string? path)

@@ -27,11 +27,6 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
     private readonly ISettingsStore _settingsStore;
 
     /// <summary>
-    /// 主窗口提供器, 用于访问系统文件夹选择器
-    /// </summary>
-    private readonly IMainWindowProvider _mainWindowProvider;
-
-    /// <summary>
     /// 小数位数
     /// </summary>
     [ObservableProperty]
@@ -110,11 +105,9 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
         ? "保存并退出" : "保存";
 
     /// <summary>
-    /// 日志按钮文本, 桌面端直接打开日志目录, 安卓端经 SAF 导出日志
+    /// 日志按钮文本, 桌面端打开日志目录, 安卓端提示日志路径 (安卓无打开文件夹的系统能力)
     /// </summary>
-    public string LogsButtonText { get; } =
-        Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
-        ? "打开日志文件夹" : "导出日志文件夹";
+    public string LogsButtonText { get; } = OperatingSystem.IsAndroid() ? "日志目录" : "打开日志文件夹";
 
     /// <summary>
     /// 日志按钮的悬浮提示
@@ -127,11 +120,9 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
     public SettingsWindowViewModel(
         CoreOptions coreOptions,
         UIOptions uiOptions,
-        ISettingsStore settingsStore,
-        IMainWindowProvider mainWindowProvider)
+        ISettingsStore settingsStore)
     {
         _settingsStore = settingsStore;
-        _mainWindowProvider = mainWindowProvider;
 
         DecimalPlaces = coreOptions.DecimalPlaces;
         MaxDegreeOfParallelism = coreOptions.MaxDegreeOfParallelism;
@@ -227,10 +218,10 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
     }
 
     /// <summary>
-    /// 打开日志文件夹, 桌面端直接打开目录, 安卓端经 SAF 选择器导出日志到用户所选位置
+    /// 打开日志文件夹, 桌面端直接打开目录, 安卓端提示日志路径 (日志位于共享存储, 可直接用文件管理器浏览)
     /// </summary>
     [RelayCommand]
-    private async Task OpenLogsFolderAsync()
+    private void OpenLogsFolder()
     {
         try
         {
@@ -238,10 +229,11 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
 
             if (OperatingSystem.IsAndroid())
             {
-                await ExportLogsAsync(Constants.LogsDirectory);
+                ShowFeedback($"日志目录: {Constants.LogsDirectory}");
                 return;
             }
-            if (!SystemOpener.TryOpen(Constants.LogsDirectory, _mainWindowProvider.MainWindow.Launcher, out var errorMessage))
+
+            if (!SystemOpener.TryOpen(Constants.LogsDirectory, out var errorMessage))
             {
                 ShowFeedback(errorMessage);
             }
@@ -249,52 +241,6 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
         catch (Exception ex)
         {
             ShowFeedback($"无法打开日志目录: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 安卓端经 SAF 文件夹选择器将日志文件复制到用户所选目录
-    /// </summary>
-    /// <param name="logsDir">日志目录</param>
-    private async Task ExportLogsAsync(string logsDir)
-    {
-        var topLevel = _mainWindowProvider.MainWindow;
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new()
-        {
-            Title = "选择日志导出位置"
-        });
-        if (folders.Count == 0)
-        {
-            return;
-        }
-
-        var logFiles = Directory.GetFiles(logsDir);
-        if (logFiles.Length == 0)
-        {
-            ShowFeedback("日志目录为空, 没有可导出的日志");
-            return;
-        }
-
-        try
-        {
-            foreach (var file in logFiles)
-            {
-                var fileName = Path.GetFileName(file);
-                var targetFile = await folders[0].CreateFileAsync(fileName);
-                if (targetFile is null)
-                {
-                    ShowFeedback($"日志导出失败: 无法在目标目录创建文件 {fileName}");
-                    return;
-                }
-                await using var source = File.OpenRead(file);
-                await using var destination = await targetFile.OpenWriteAsync();
-                await source.CopyToAsync(destination);
-            }
-            ShowFeedback($"日志已导出到: {folders[0].Path}");
-        }
-        catch (Exception ex)
-        {
-            ShowFeedback($"日志导出失败: {ex.Message}");
         }
     }
 
@@ -308,5 +254,4 @@ public sealed partial class SettingsWindowViewModel : ToastViewModelBase
             desktop.Shutdown();
         }
     }
-
 }

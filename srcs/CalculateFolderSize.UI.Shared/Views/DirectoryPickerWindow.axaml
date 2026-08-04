@@ -1,0 +1,42 @@
+<Window x:Class="CalculateFolderSize.UI.Shared.Views.DirectoryPickerWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CalculateFolderSize.UI.Shared.ViewModels"
+        xmlns:core="using:CalculateFolderSize.Core.Models"
+        xmlns:views="using:CalculateFolderSize.UI.Shared.Views"
+        x:DataType="vm:DirectoryPickerViewModel"
+        Icon="/Assets/logo.ico"
+        Title="选择文件夹"
+        Width="420" Height="520"
+        WindowStartupLocation="CenterOwner">
+
+  <Panel>
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+      <!-- 当前路径 -->
+      <TextBlock Text="{Binding CurrentPath}" Margin="8,8,8,4" TextWrapping="Wrap"/>
+
+      <!-- 操作按钮 -->
+      <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="8,4">
+        <Button Content="上一级" Command="{Binding GoUpCommand}" IsEnabled="{Binding CanGoUp}"/>
+        <Button Content="选择此目录" Click="OnConfirmClick"/>
+        <Button Content="取消" Click="OnCancelClick"/>
+      </StackPanel>
+
+      <!-- 子文件夹列表, 双击进入 -->
+      <ListBox Grid.Row="2" ItemsSource="{Binding Directories}" Margin="8,4"
+               DoubleTapped="OnDirectoryDoubleTapped">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="core:DirectoryEntry">
+            <TextBlock Text="{Binding Name}"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <!-- 右下角 Toast 通知 -->
+      <views:ToastView Grid.Row="3"/>
+
+    </Grid>
+  </Panel>
+
+</Window>

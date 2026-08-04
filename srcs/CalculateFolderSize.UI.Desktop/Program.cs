@@ -1,6 +1,7 @@
 using Avalonia;
 using CalculateFolderSize.Core;
 using CalculateFolderSize.UI.Shared;
+using CalculateFolderSize.UI.Shared.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -39,6 +40,7 @@ file static class Program
             .AddSingleton<IConfiguration>(configuration)
             .AddCore()
             .AddUIShared()
+            .AddSingleton<IStorageAccessService, DesktopStorageAccessService>()
             .BuildServiceProvider();
 
         App.Services = services;

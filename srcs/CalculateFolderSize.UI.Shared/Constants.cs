@@ -25,12 +25,19 @@ public static class Constants
     };
 
     /// <summary>
-    /// 程序数据目录
+    /// 安卓共享存储根路径, 需授予全部文件访问权限后才能访问
     /// </summary>
-    public static readonly string AppDataDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        nameof(CalculateFolderSize)
-    );
+    public const string AndroidSharedStorageRoot = "/storage/emulated/0";
+
+    /// <summary>
+    /// 程序数据目录, 安卓端位于共享存储以便文件管理器直接浏览, 桌面端位于应用数据目录
+    /// </summary>
+    public static readonly string AppDataDirectory = OperatingSystem.IsAndroid()
+        ? Path.Combine(AndroidSharedStorageRoot, nameof(CalculateFolderSize))
+        : Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            nameof(CalculateFolderSize)
+        );
 
     /// <summary>
     /// 日志文件夹目录
