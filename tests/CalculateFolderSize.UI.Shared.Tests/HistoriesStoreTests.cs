@@ -14,6 +14,7 @@ public sealed class HistoriesStoreTests
 
     private static (bool Existed, string[]? Lines) BackupAndDeleteHistoriesFile()
     {
+        _ = Directory.CreateDirectory(Constants.AppDataDirectory);
         var existed = File.Exists(HistoriesFilePath);
         var lines = existed ? File.ReadAllLines(HistoriesFilePath) : null;
         if (existed)

@@ -22,6 +22,10 @@
 
 - **代码简化**: `FolderSizeCalculator` 移除 `state` 中间变量改用目标类型 new 内联; `SettingsStore.SaveSettingsAsync` 的 `JsonObject` 构建后直接链式调用 `ToJsonString`, 移除中间变量 (纯重构, 无行为变化)
 
+### Fixed
+
+- **UI.Shared 测试在干净环境下的文件写入**: `SettingsStoreTests` / `HistoriesStoreTests` 备份文件前先创建 `Constants.AppDataDirectory` 目录, 修复 CI 等全新环境中 AppData 目录不存在时设置/历史记录写入失败导致断言读文件报错
+
 ---
 
 ## [1.0.0] - 2026-08-04

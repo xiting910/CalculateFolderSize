@@ -18,6 +18,7 @@ public sealed class SettingsStoreTests
 
     private static (bool Existed, string? Content) BackupSettingsFile()
     {
+        _ = Directory.CreateDirectory(Constants.AppDataDirectory);
         var existed = File.Exists(SettingsFilePath);
         return (existed, existed ? File.ReadAllText(SettingsFilePath) : null);
     }
@@ -26,7 +27,7 @@ public sealed class SettingsStoreTests
     {
         if (existed)
         {
-            File.WriteAllText(SettingsFilePath, content!);
+            File.WriteAllText(SettingsFilePath, content);
         }
         else if (File.Exists(SettingsFilePath))
         {
