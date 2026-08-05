@@ -9,6 +9,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- **UI.Shared 层单元测试**: 新增 `CalculateFolderSize.UI.Shared.Tests` 测试项目并加入解决方案, 基于 xunit.v3 + Moq, 覆盖:
+  - `UIOptionsTests`: 配置解析与非法值处理 (无效枚举回退默认值、节流间隔与 Toast 时长上下限钳制、缺失配置节时使用默认值)
+  - `CalculateProgressTests`: 基于 `FakeTimeProvider` 的节流间隔抑制、EMA 速度平滑、完成时总速度上报与事件发送者断言
+  - `HistoriesStoreTests`: 历史记录新增 (最近路径置前)/移除/清空/文件持久化与加载, 含按路径比较器去重 (大小写不敏感), 测试前后备份恢复 histories.txt
+  - `SettingsStoreTests`: Core/UI 配置更新后 settings.json 文件内容断言, 测试前后备份恢复 settings.json
+  - `EnumExtensionsTests`: `GetDescription` 中文描述获取, 无 Description 特性时回退枚举名称
+
+### Changed
+
+- **代码简化**: `FolderSizeCalculator` 移除 `state` 中间变量改用目标类型 new 内联; `SettingsStore.SaveSettingsAsync` 的 `JsonObject` 构建后直接链式调用 `ToJsonString`, 移除中间变量 (纯重构, 无行为变化)
+
 ---
 
 ## [1.0.0] - 2026-08-04

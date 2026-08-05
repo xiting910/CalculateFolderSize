@@ -130,7 +130,8 @@ CalculateFolderSize/
 │       └── Resources/                      # Android 资源 (启动画面/主题/颜色/动画)
 ├── tests/
 │   ├── CalculateFolderSize.Core.Tests/     # Core 层单元测试 (xunit.v3 + Moq, 覆盖 Calculator/子项查询/日志/FileSystem/Formatter/Options)
-│   └── CalculateFolderSize.Cli.Tests/      # CLI 层单元测试 (xunit.v3 + Moq, 覆盖 App/输入解析/路径标准化/配置)
+│   ├── CalculateFolderSize.Cli.Tests/      # CLI 层单元测试 (xunit.v3 + Moq, 覆盖 App/输入解析/路径标准化/配置)
+│   └── CalculateFolderSize.UI.Shared.Tests/ # UI.Shared 层单元测试 (xunit.v3 + Moq, 覆盖 UIOptions/进度节流/历史记录/设置存储/枚举扩展)
 ├── Directory.Build.props                   # 共享 MSBuild 属性
 ├── Directory.Packages.props                # NuGet 依赖集中管理 (CPM)
 ├── CalculateFolderSize.slnx                # 解决方案文件

@@ -43,7 +43,7 @@ internal sealed partial class SettingsStore(
     /// <param name="cancellationToken">取消令牌</param>
     private async Task SaveSettingsAsync(CancellationToken cancellationToken = default)
     {
-        var json = new JsonObject
+        var jsonString = new JsonObject
         {
             [nameof(Core)] = new JsonObject
             {
@@ -59,8 +59,7 @@ internal sealed partial class SettingsStore(
                 [nameof(UIOptions.ToastDurationSeconds)] = _uiOptions.ToastDurationSeconds,
                 [nameof(UIOptions.Level)] = _uiOptions.Level.ToString()
             }
-        };
-        var jsonString = json.ToJsonString(Constants.JsonSerializerOptions);
+        }.ToJsonString(Constants.JsonSerializerOptions);
 
         try
         {

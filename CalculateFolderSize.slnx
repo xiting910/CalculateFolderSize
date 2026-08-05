@@ -18,5 +18,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/CalculateFolderSize.Cli.Tests/CalculateFolderSize.Cli.Tests.csproj" Id="5427d98a-3075-44ce-98ba-1713b89db36a" />
     <Project Path="tests/CalculateFolderSize.Core.Tests/CalculateFolderSize.Core.Tests.csproj" Id="8ba29b9f-99f0-478c-a3e7-215134962a7e" />
+    <Project Path="tests/CalculateFolderSize.UI.Shared.Tests/CalculateFolderSize.UI.Shared.Tests.csproj" Id="a8c6f0dc-e391-448b-a578-5a8fe7f96490" />
   </Folder>
 </Solution>

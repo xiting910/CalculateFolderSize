@@ -109,11 +109,10 @@ internal sealed partial class FolderSizeCalculator(
         }
 
         LogCalculateStarted(folderPath);
-        var state = progress is null ? null : new State(progress);
         lock (_activeCalculationsLock) { _activeCalculations++; }
         try
         {
-            var result = CalculateSize(folderPath, state, token);
+            var result = CalculateSize(folderPath, progress is null ? null : new(progress), token);
             LogCalculateCompleted(folderPath, result.TotalBytes, result.FileCount, result.FolderCount);
             return result;
         }
