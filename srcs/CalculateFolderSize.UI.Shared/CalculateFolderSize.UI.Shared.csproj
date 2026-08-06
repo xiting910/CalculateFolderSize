@@ -13,10 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="CalculateFolderSize.UI.Shared.Tests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Controls.DataGrid" />
     <PackageReference Include="Avalonia.Fonts.Inter" />

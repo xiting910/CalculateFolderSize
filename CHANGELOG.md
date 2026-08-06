@@ -22,6 +22,7 @@
 
 - **代码简化**: `FolderSizeCalculator` 移除 `state` 中间变量改用目标类型 new 内联; `SettingsStore.SaveSettingsAsync` 的 `JsonObject` 构建后直接链式调用 `ToJsonString`, 移除中间变量 (纯重构, 无行为变化)
 - **MSBuild 属性重命名**: `Directory.Build.props` 中自定义的 `ProductName` / `Author` 重命名为 .NET SDK 约定属性 `Product` / `Authors`, `AssemblyMetadata` 键同步更新; Android csproj 的 ApplicationId / ApplicationIdTitle / 签名别名引用同步; 设置视图的 `SettingsViewModel` 元数据读取与 `SettingsView.axaml` 绑定同步重命名 (纯重构, 无行为变化)
+- **InternalsVisibleTo 集中管理**: 各项目 csproj 中手写的 `InternalsVisibleTo` 声明移除, 统一由 `Directory.Build.props` 根据项目名自动为非测试项目添加指向 `$(MSBuildProjectName).Tests` 的 `InternalsVisibleTo` (纯重构, 无行为变化)
 
 ### Fixed
 

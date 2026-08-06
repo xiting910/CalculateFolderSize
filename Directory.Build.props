@@ -32,6 +32,11 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <!-- 非测试项目设置 InternalsVisibleTo 为测试项目 -->
+  <ItemGroup Condition="'$(IsTestProject)' != 'true'">
+    <InternalsVisibleTo Include="$(MSBuildProjectName).Tests" />
+  </ItemGroup>
+
   <!-- 仅测试项目: 设置输出类型为 Exe, 启用测试平台支持 + 隐式 using + 不可打包, 忽略特定警告 -->
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
     <OutputType>Exe</OutputType>
