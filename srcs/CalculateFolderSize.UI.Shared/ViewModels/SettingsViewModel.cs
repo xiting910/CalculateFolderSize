@@ -84,9 +84,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<LogLevel> Levels { get; } = Enum.GetValues<LogLevel>();
 
     /// <summary>
-    /// 产品名
+    /// 产品
     /// </summary>
-    public string ProductName { get; }
+    public string Product { get; }
 
     /// <summary>
     /// 版本号
@@ -96,7 +96,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>
     /// 作者
     /// </summary>
-    public string Author { get; }
+    public string Authors { get; }
 
     /// <summary>
     /// 许可证
@@ -153,9 +153,9 @@ public sealed partial class SettingsViewModel : ObservableObject
             .GetCustomAttributes<AssemblyMetadataAttribute>()
             .ToDictionary(a => a.Key, a => a.Value!);
 
-        ProductName = metadata[nameof(ProductName)];
+        Product = metadata[nameof(Product)];
         Version = metadata[nameof(Version)];
-        Author = metadata[nameof(Author)];
+        Authors = metadata[nameof(Authors)];
         License = metadata[nameof(License)];
         GitHubUrl = metadata[nameof(GitHubUrl)];
     }

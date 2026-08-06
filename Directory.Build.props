@@ -9,16 +9,16 @@
     <Nullable>enable</Nullable>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <NoWarn>$(NoWarn);NU1507</NoWarn>
-    <ProductName>CalculateFolderSize</ProductName>
-    <Author>xiting910</Author>
+    <Product>CalculateFolderSize</Product>
+    <Authors>xiting910</Authors>
   </PropertyGroup>
 
   <!-- 所有项目共用的 AssemblyMetadata -->
   <ItemGroup>
-    <AssemblyMetadata Include="Author" Value="$(Author)"/>
-    <AssemblyMetadata Include="GitHubUrl" Value="https://github.com/$(Author)/$(ProductName)"/>
+    <AssemblyMetadata Include="Authors" Value="$(Authors)"/>
+    <AssemblyMetadata Include="GitHubUrl" Value="https://github.com/$(Authors)/$(Product)"/>
     <AssemblyMetadata Include="License" Value="MIT"/>
-    <AssemblyMetadata Include="ProductName" Value="$(ProductName)"/>
+    <AssemblyMetadata Include="Product" Value="$(Product)"/>
     <AssemblyMetadata Include="Version" Value="$(Version)"/>
   </ItemGroup>
 

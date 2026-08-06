@@ -91,11 +91,11 @@
                    Foreground="{DynamicResource TitleForegroundBrush}"/>
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
           <TextBlock Text="产品:"/>
-          <TextBlock Grid.Column="1" Text="{Binding ProductName}"/>
+          <TextBlock Grid.Column="1" Text="{Binding Product}"/>
           <TextBlock Grid.Row="1" Text="版本:"/>
           <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Version}"/>
           <TextBlock Grid.Row="2" Text="作者:"/>
-          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Author}"/>
+          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Authors}"/>
           <TextBlock Grid.Row="3" Text="许可证:"/>
           <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding License}"/>
           <TextBlock Grid.Row="4" Text="GitHub:"/>
